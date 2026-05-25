@@ -1,0 +1,40 @@
+{
+  "version": 23,
+  "minimumVersion": "1.0.0-alpha.1",
+  "exportedFrom": "1.0.4",
+  "meta": {
+    "name": "Deterministic C# Stub",
+    "author": "Stream Jams",
+    "version": "0.0.0",
+    "description": "Committed fixture used to build deterministic Streamer.bot module imports in CI.",
+    "autoRunAction": null,
+    "minimumVersion": null
+  },
+  "data": {
+    "actions": [
+      {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "name": "Deterministic C# Stub",
+        "group": "Stream Jams Fixtures",
+        "enabled": true,
+        "triggers": [],
+        "subActions": [
+          {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "type": "Execute C# Code",
+            "index": 0,
+            "enabled": true,
+            "references": [],
+            "byteCode": "cHVibGljIGNsYXNzIENQSElubGluZSB7IHB1YmxpYyBib29sIEV4ZWN1dGUoKSB7IHJldHVybiB0cnVlOyB9IH0="
+          }
+        ],
+        "collapsedGroups": []
+      }
+    ],
+    "queues": [],
+    "commands": [],
+    "websocketServers": [],
+    "websocketClients": [],
+    "timers": []
+  }
+}

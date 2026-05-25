@@ -1,8 +1,12 @@
 # Activity-Gated Chat Announcements
 
+## What It Does
+
 Activity-Gated Chat Announcements is a generic Streamer.bot module pattern for posting recurring chat announcements only after a target chat has had enough real activity. It supports multiple announcement jobs and multiple explicit chat targets without baking Twitch, YouTube, or any other platform send method into the scheduler.
 
 No prebuilt .sb import bundle is committed. Generate one with `tools/streamerbot_import/build_module_import.py` from a known-good C# action export from your Streamer.bot version so the generated actions reuse the action/sub-action schema your install already accepts.
+
+## Installation
 
 The full module bundle can be prepared once you have a known-good exported C# action stub from your Streamer.bot install:
 
@@ -30,7 +34,7 @@ See `docs/import-prep.md` for the full workflow and safety checks.
 - `docs/sender-actions.md`: example sender actions for Twitch and YouTube.
 - `docs/manual-test-checklist.md`: manual verification checklist before using this live.
 
-## Global Configuration
+## Configuration
 
 The generated import includes `AGA - Configure Defaults`, which initializes these persisted globals if they do not already exist:
 
@@ -45,7 +49,7 @@ Edit `activityGatedAnnouncements.discordInviteUrl`, `activityGatedAnnouncements.
 
 Most users should only edit `intervalMinutes`, `minChats`, `enabled`, and `targetIds` in `activityGatedAnnouncements.config`.
 
-## Action Layout
+## Generated Actions
 
 Recommended group:
 
