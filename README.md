@@ -37,6 +37,38 @@ python3 -m tools.streamerbot_import.build_module_import \
 
 Generated `.sb` bundles are intentionally ignored by Git. Import generated bundles into a disposable Streamer.bot profile first, compile the imported C# actions, then move them into your live profile.
 
+## Build All Module Artifacts
+
+CI builds every module from the committed Streamer.bot C# stub fixture:
+
+```bash
+python3 -m tools.streamerbot_import.build_all_modules --output dist/modules
+```
+
+Each module receives:
+
+```text
+<module-id>.sb
+<module-id>.import.txt
+README.md
+module.json
+manifest.json
+```
+
+Each module README must include `## What It Does`, `## Installation`, `## Configuration`, and `## Generated Actions`. The build fails if those sections are missing or if the generated `.sb` import cannot be decoded.
+
+## Manual Release Archive
+
+Run the `module-release` GitHub Actions workflow manually to produce a compressed release archive. To reproduce that archive locally:
+
+```bash
+python3 -m tools.streamerbot_import.build_all_modules \
+  --output dist/modules \
+  --archive dist/stream-jams-streamerbot-modules.zip
+```
+
+The archive uses sorted file order, fixed zip timestamps, stable JSON serialization, deterministic action IDs, and a committed Streamer.bot stub fixture so identical repository content produces identical artifacts.
+
 ## Test
 
 ```bash

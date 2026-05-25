@@ -58,7 +58,9 @@ def canonical_json(payload):
 
 
 def encode_sb_payload(payload):
-    raw_json = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    raw_json = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     compressor = zlib.compressobj(
         level=9,
         method=zlib.DEFLATED,
@@ -83,7 +85,10 @@ def write_payload(payload, path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if path.suffix.lower() == ".json":
-        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
         return
 
     path.write_bytes(encode_sb_payload(payload))
