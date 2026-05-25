@@ -17,7 +17,7 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
-DEFAULT_STUB_PATH = SCRIPT_DIR / "fixtures" / "streamerbot-1.0.4-csharp-stub.json"
+DEFAULT_STUB_PATH = build_module_import.DEFAULT_STUB_PATH
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "dist" / "modules"
 REQUIRED_README_SECTIONS = (
     "## What It Does",

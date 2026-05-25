@@ -316,6 +316,35 @@ class SchedulerImportPrepTest(unittest.TestCase):
                 action_code(action_by_name(prepared, "AGA - Run Announcement Scheduler")),
             )
 
+    def test_cli_uses_committed_default_stub_when_input_is_omitted(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "activity-gated-chat-announcements.sb"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    str(MODULE_ROOT),
+                    str(output_path),
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            prepared = load_script().read_payload(output_path)
+            action_names = {action["name"] for action in prepared["data"]["actions"]}
+            self.assertEqual(action_names, EXPECTED_ACTION_NAMES)
+            self.assertEqual(
+                prepared["meta"]["description"],
+                (
+                    "Experimental Activity-Gated Chat Announcements import prepared "
+                    "from the repository Streamer.bot C# action fixture. Import into "
+                    "a disposable profile first, then inspect before live use."
+                ),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
