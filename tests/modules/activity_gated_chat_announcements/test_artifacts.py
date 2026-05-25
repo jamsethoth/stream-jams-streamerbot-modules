@@ -125,7 +125,7 @@ class ActivityGatedAnnouncementsArtifactsTest(unittest.TestCase):
         self.assertRegex(scheduler, r"DateTime\.UtcNow")
         self.assertNotRegex(scheduler, r"args\s*\[")
 
-    def test_setup_docs_warn_against_import_bundle_and_include_manual_tests(self):
+    def test_setup_docs_describe_streamerbot_import_usage(self):
         readme = (MODULE_ROOT / "README.md").read_text(encoding="utf-8")
         sender_docs = (MODULE_ROOT / "docs" / "sender-actions.md").read_text(
             encoding="utf-8"
@@ -138,8 +138,11 @@ class ActivityGatedAnnouncementsArtifactsTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("activityGatedAnnouncements.config", readme)
-        self.assertIn("No prebuilt .sb import bundle is committed", readme)
-        self.assertIn("build_module_import.py", readme)
+        self.assertIn("activity-gated-chat-announcements.sb", readme)
+        self.assertIn("Import", readme)
+        self.assertNotIn("paste into", readme)
+        self.assertNotIn("Execute C# Code sub-action", readme)
+        self.assertNotIn("known-good exported C# action stub", readme)
         self.assertIn("known-good", import_prep)
         self.assertIn("disposable profile", import_prep)
         self.assertIn("build_module_import.py", import_prep)
