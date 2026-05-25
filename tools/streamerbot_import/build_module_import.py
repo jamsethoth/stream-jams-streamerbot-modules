@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a Streamer.bot module import from a known-good C# action export."""
+"""Build a Streamer.bot module import from a C# action template."""
 
 import argparse
 import base64
@@ -13,6 +13,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
+DEFAULT_STUB_PATH = SCRIPT_DIR / "fixtures" / "streamerbot-1.0.4-csharp-stub.json"
 
 try:
     from .sb_import_string import read_payload, write_payload
@@ -35,8 +36,8 @@ class PrepResult:
 
 def prepare_module_import(
     module_dir,
-    input_path,
     output_path,
+    input_path=DEFAULT_STUB_PATH,
 ):
     module_dir = Path(module_dir)
     manifest = load_module_manifest(module_dir)
@@ -70,7 +71,7 @@ def prepare_module_import(
 def prepare_scheduler_import(input_path, output_path, scheduler_code_path=None):
     del scheduler_code_path
     module_dir = REPO_ROOT / "modules" / "activity-gated-chat-announcements"
-    return prepare_module_import(module_dir, input_path, output_path)
+    return prepare_module_import(module_dir, input_path=input_path, output_path=output_path)
 
 
 def load_module_manifest(module_dir):
@@ -202,8 +203,8 @@ def update_metadata(payload, manifest):
     meta["name"] = manifest["name"]
     meta["version"] = manifest["version"]
     meta["description"] = (
-        f"Experimental {manifest['name']} import prepared from a known-good local "
-        "Streamer.bot C# action export. Import into a disposable profile first, "
+        f"Experimental {manifest['name']} import prepared from the repository "
+        "Streamer.bot C# action fixture. Import into a disposable profile first, "
         "then inspect before live use."
     )
 
@@ -233,19 +234,39 @@ def write_bundle_data(payload, actions):
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Prepare a Streamer.bot module import by cloning a known-good "
-            "exported C# action."
+            "Prepare a Streamer.bot module import from the committed C# action "
+            "fixture, or from a custom exported C# action stub."
         )
     )
     parser.add_argument("module", help="Module directory containing module.json")
-    parser.add_argument("input", help="Known-good exported C# action stub .sb or .json")
-    parser.add_argument("output", help="Prepared output .sb or .json")
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        help=(
+            "Either OUTPUT, or INPUT OUTPUT for compatibility with older commands. "
+            "When INPUT is omitted, the committed Streamer.bot C# stub fixture is used."
+        ),
+    )
+    parser.add_argument(
+        "--stub",
+        default=DEFAULT_STUB_PATH,
+        help="Optional custom exported C# action stub .sb or .json.",
+    )
     args = parser.parse_args()
+
+    if len(args.paths) == 1:
+        input_path = Path(args.stub)
+        output_path = Path(args.paths[0])
+    elif len(args.paths) == 2:
+        input_path = Path(args.paths[0])
+        output_path = Path(args.paths[1])
+    else:
+        parser.error("expected OUTPUT or INPUT OUTPUT")
 
     result = prepare_module_import(
         module_dir=Path(args.module),
-        input_path=Path(args.input),
-        output_path=Path(args.output),
+        input_path=input_path,
+        output_path=output_path,
     )
 
     print(

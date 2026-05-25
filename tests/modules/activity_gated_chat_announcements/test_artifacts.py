@@ -72,6 +72,24 @@ class ActivityGatedAnnouncementsArtifactsTest(unittest.TestCase):
                 for target_id in job["targetIds"]:
                     self.assertIn(target_id, config["targets"])
 
+    def test_reference_docs_call_out_system_core_path_variation(self):
+        manifest = json.loads(
+            (MODULE_ROOT / "module.json").read_text(encoding="utf-8")
+        )
+        readme = (MODULE_ROOT / "README.md").read_text(encoding="utf-8")
+
+        references = manifest["references"]
+        self.assertIn(
+            "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll",
+            references,
+        )
+        self.assertFalse(any("Users" in reference for reference in references))
+        self.assertFalse(any("/mnt/" in reference for reference in references))
+        self.assertIn("## C# References", readme)
+        self.assertIn("System.Core.dll", readme)
+        self.assertIn("Framework64", readme)
+        self.assertIn("Framework\\v4.0.30319", readme)
+
     def test_tracker_action_contains_required_state_and_guards(self):
         tracker = (MODULE_ROOT / "src" / "actions" / "track-chat-activity.cs").read_text(
             encoding="utf-8"
@@ -125,7 +143,7 @@ class ActivityGatedAnnouncementsArtifactsTest(unittest.TestCase):
         self.assertRegex(scheduler, r"DateTime\.UtcNow")
         self.assertNotRegex(scheduler, r"args\s*\[")
 
-    def test_setup_docs_warn_against_import_bundle_and_include_manual_tests(self):
+    def test_setup_docs_describe_streamerbot_import_usage(self):
         readme = (MODULE_ROOT / "README.md").read_text(encoding="utf-8")
         sender_docs = (MODULE_ROOT / "docs" / "sender-actions.md").read_text(
             encoding="utf-8"
@@ -138,11 +156,15 @@ class ActivityGatedAnnouncementsArtifactsTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("activityGatedAnnouncements.config", readme)
-        self.assertIn("No prebuilt .sb import bundle is committed", readme)
-        self.assertIn("build_module_import.py", readme)
-        self.assertIn("known-good", import_prep)
+        self.assertIn("activity-gated-chat-announcements.sb", readme)
+        self.assertIn("Import", readme)
+        self.assertNotIn("paste into", readme)
+        self.assertNotIn("Execute C# Code sub-action", readme)
+        self.assertNotIn("known-good exported C# action stub", readme)
+        self.assertIn("committed Streamer.bot 1.0.4 C# action fixture", import_prep)
+        self.assertIn("Optional Custom Stub", import_prep)
         self.assertIn("disposable profile", import_prep)
-        self.assertIn("build_module_import.py", import_prep)
+        self.assertIn("build_module_import", import_prep)
         self.assertIn("%message%", sender_docs)
         self.assertIn("Twitch", sender_docs)
         self.assertIn("YouTube", sender_docs)

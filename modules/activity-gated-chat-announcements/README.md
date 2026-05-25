@@ -4,33 +4,47 @@
 
 Activity-Gated Chat Announcements is a generic Streamer.bot module pattern for posting recurring chat announcements only after a target chat has had enough real activity. It supports multiple announcement jobs and multiple explicit chat targets without baking Twitch, YouTube, or any other platform send method into the scheduler.
 
-No prebuilt .sb import bundle is committed. Generate one with `tools/streamerbot_import/build_module_import.py` from a known-good C# action export from your Streamer.bot version so the generated actions reuse the action/sub-action schema your install already accepts.
+Use the generated `.sb` import file from the release archive or CI artifact. The C# source files in this repository are build inputs for that import, not user installation steps.
 
 ## Installation
 
-The full module bundle can be prepared once you have a known-good exported C# action stub from your Streamer.bot install:
+1. Download the module artifact or release archive.
+2. Extract `activity-gated-chat-announcements/activity-gated-chat-announcements.sb`.
+3. In Streamer.bot, open `Import`.
+4. Load the `.sb` file, or open `activity-gated-chat-announcements.import.txt` and paste that import text into the import field.
+5. Confirm the import contains the `Activity-Gated Announcements` actions, then import them.
+6. Open the imported actions and compile the C# sub-actions.
+7. Run `AGA - Configure Defaults` if Streamer.bot does not auto-run it after import.
 
-```bash
-python3 -m tools.streamerbot_import.build_module_import \
-  modules/activity-gated-chat-announcements \
-  exports/csharp-stub.sb \
-  build/activity-gated-chat-announcements.sb
+The import file creates the module actions and default configuration globals. After import, use Streamer.bot's global variable viewer to adjust timing, chat-count thresholds, target enablement, and shared values such as the Discord invite URL.
+
+## C# References
+
+The generated C# sub-actions include a `System.Core.dll` reference because the module uses framework types and LINQ helpers. The default import reference is:
+
+```text
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll
 ```
 
-See `docs/import-prep.md` for the full workflow and safety checks.
+That path is the standard 64-bit Windows .NET Framework location and is not tied to a user profile or this repository. If Streamer.bot reports a missing metadata/reference file while compiling the imported C# actions, edit each imported C# sub-action's references to point at the `System.Core.dll` path on that machine. Common alternatives include:
 
-## Files
+```text
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Core.dll
+%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll
+```
+
+## Source Layout
 
 - `module.json`: module metadata used by the import builder.
-- `src/actions/track-chat-activity.cs`: paste into the generic tracker action's Execute C# Code sub-action.
-- `src/actions/run-announcement-scheduler.cs`: paste into the timer-driven scheduler action's Execute C# Code sub-action.
-- `src/actions/configure-defaults.cs`: initializes the default config and shared editable globals.
-- `src/actions/send-twitch-message.cs`: generated Twitch sender action source.
-- `src/actions/send-youtube-message.cs`: generated YouTube sender action source.
-- `src/actions/track-twitch-main.cs`: wrapper action source for Twitch chat activity.
-- `src/actions/track-youtube-main.cs`: wrapper action source for YouTube chat activity.
+- `src/actions/track-chat-activity.cs`: tracker action source included in the generated import.
+- `src/actions/run-announcement-scheduler.cs`: scheduler action source included in the generated import.
+- `src/actions/configure-defaults.cs`: default config initializer included in the generated import.
+- `src/actions/send-twitch-message.cs`: Twitch sender action source included in the generated import.
+- `src/actions/send-youtube-message.cs`: YouTube sender action source included in the generated import.
+- `src/actions/track-twitch-main.cs`: Twitch wrapper action source included in the generated import.
+- `src/actions/track-youtube-main.cs`: YouTube wrapper action source included in the generated import.
 - `src/config/default-config.json`: starter config for a Discord server announcement across Twitch and YouTube.
-- `docs/import-prep.md`: workflow for turning a known-good local scheduler export into an experimental `.sb` import.
+- `docs/import-prep.md`: maintainer workflow for producing a local `.sb` import during development.
 - `docs/sender-actions.md`: example sender actions for Twitch and YouTube.
 - `docs/manual-test-checklist.md`: manual verification checklist before using this live.
 
