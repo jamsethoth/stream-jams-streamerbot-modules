@@ -1,0 +1,10 @@
+[project]
+name = "stream-jams-streamerbot-modules"
+version = "0.1.0"
+description = "Streamer.bot module source and import tooling for Stream Jams."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

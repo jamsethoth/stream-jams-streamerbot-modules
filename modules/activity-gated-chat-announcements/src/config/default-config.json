@@ -1,0 +1,59 @@
+{
+  "debugLogging": false,
+  "variables": {
+    "discordInviteUrl": "activityGatedAnnouncements.discordInviteUrl",
+    "twitchChannelName": "activityGatedAnnouncements.twitchChannelName",
+    "youtubeChannelName": "activityGatedAnnouncements.youtubeChannelName"
+  },
+  "ignoredUsers": [
+    "streamerbot",
+    "nightbot",
+    "streamelements"
+  ],
+  "targets": {
+    "twitch_main": {
+      "platform": "twitch",
+      "enabled": true,
+      "senderAction": "AGA - Send Twitch Message",
+      "ignoredUsers": [
+        "{twitchChannelName}"
+      ],
+      "selfUsers": [
+        "{twitchChannelName}"
+      ],
+      "broadcasterUsers": [
+        "{twitchChannelName}"
+      ]
+    },
+    "youtube_main": {
+      "platform": "youtube",
+      "enabled": true,
+      "senderAction": "AGA - Send YouTube Message",
+      "ignoredUsers": [
+        "{youtubeChannelName}"
+      ],
+      "selfUsers": [
+        "{youtubeChannelName}"
+      ],
+      "broadcasterUsers": [
+        "{youtubeChannelName}"
+      ]
+    }
+  },
+  "jobs": [
+    {
+      "id": "discord",
+      "enabled": true,
+      "targetIds": [
+        "twitch_main",
+        "youtube_main"
+      ],
+      "intervalMinutes": 30,
+      "minChats": 25,
+      "defaultMessage": "Join our Discord: {discordInviteUrl}",
+      "messagesByTarget": {
+        "youtube_main": "Join our Discord: {discordInviteUrl}"
+      }
+    }
+  ]
+}

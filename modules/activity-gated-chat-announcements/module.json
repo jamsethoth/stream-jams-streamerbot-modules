@@ -1,0 +1,43 @@
+{
+  "id": "activity-gated-chat-announcements",
+  "name": "Activity-Gated Chat Announcements",
+  "version": "0.1.0",
+  "description": "Activity-gated recurring chat announcements for Streamer.bot.",
+  "license": "AGPL-3.0-or-later",
+  "group": "Activity-Gated Announcements",
+  "actions": [
+    {
+      "name": "AGA - Configure Defaults",
+      "source": "src/actions/configure-defaults.cs",
+      "autoRun": true
+    },
+    {
+      "name": "AGA - Track Chat Activity",
+      "source": "src/actions/track-chat-activity.cs"
+    },
+    {
+      "name": "AGA - Track Twitch Main",
+      "source": "src/actions/track-twitch-main.cs"
+    },
+    {
+      "name": "AGA - Track YouTube Main",
+      "source": "src/actions/track-youtube-main.cs"
+    },
+    {
+      "name": "AGA - Run Announcement Scheduler",
+      "source": "src/actions/run-announcement-scheduler.cs"
+    },
+    {
+      "name": "AGA - Send Twitch Message",
+      "source": "src/actions/send-twitch-message.cs"
+    },
+    {
+      "name": "AGA - Send YouTube Message",
+      "source": "src/actions/send-youtube-message.cs"
+    }
+  ],
+  "defaultConfig": "src/config/default-config.json",
+  "references": [
+    "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
+  ]
+}
