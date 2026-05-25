@@ -72,6 +72,24 @@ class ActivityGatedAnnouncementsArtifactsTest(unittest.TestCase):
                 for target_id in job["targetIds"]:
                     self.assertIn(target_id, config["targets"])
 
+    def test_reference_docs_call_out_system_core_path_variation(self):
+        manifest = json.loads(
+            (MODULE_ROOT / "module.json").read_text(encoding="utf-8")
+        )
+        readme = (MODULE_ROOT / "README.md").read_text(encoding="utf-8")
+
+        references = manifest["references"]
+        self.assertIn(
+            "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll",
+            references,
+        )
+        self.assertFalse(any("Users" in reference for reference in references))
+        self.assertFalse(any("/mnt/" in reference for reference in references))
+        self.assertIn("## C# References", readme)
+        self.assertIn("System.Core.dll", readme)
+        self.assertIn("Framework64", readme)
+        self.assertIn("Framework\\v4.0.30319", readme)
+
     def test_tracker_action_contains_required_state_and_guards(self):
         tracker = (MODULE_ROOT / "src" / "actions" / "track-chat-activity.cs").read_text(
             encoding="utf-8"

@@ -18,6 +18,21 @@ Use the generated `.sb` import file from the release archive or CI artifact. The
 
 The import file creates the module actions and default configuration globals. After import, use Streamer.bot's global variable viewer to adjust timing, chat-count thresholds, target enablement, and shared values such as the Discord invite URL.
 
+## C# References
+
+The generated C# sub-actions include a `System.Core.dll` reference because the module uses framework types and LINQ helpers. The default import reference is:
+
+```text
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll
+```
+
+That path is the standard 64-bit Windows .NET Framework location and is not tied to a user profile or this repository. If Streamer.bot reports a missing metadata/reference file while compiling the imported C# actions, edit each imported C# sub-action's references to point at the `System.Core.dll` path on that machine. Common alternatives include:
+
+```text
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Core.dll
+%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll
+```
+
 ## Source Layout
 
 - `module.json`: module metadata used by the import builder.
