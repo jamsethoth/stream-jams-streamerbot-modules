@@ -17,10 +17,10 @@ modules/
     src/actions/
     src/config/
     docs/
+    tests/
 tools/
   streamerbot_import/
 tests/
-  modules/
   tools/
 ```
 
@@ -73,5 +73,5 @@ The archive uses sorted file order, fixed zip timestamps, stable JSON serializat
 ## Test
 
 ```bash
-python3 -B -m unittest discover -s tests -t .
+python3 -B tools/run_tests.py
 ```
