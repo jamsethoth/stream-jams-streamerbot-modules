@@ -74,6 +74,14 @@ public class CPHInline
       ""!shoutoutall""
     ]
   },
+  ""autoToggle"": {
+    ""enabled"": true,
+    ""moderatorOnly"": true,
+    ""aliases"": [
+      ""!soauto"",
+      ""!shoutoutauto""
+    ]
+  },
   ""people"": [
     {
       ""login"": ""examplecreator"",

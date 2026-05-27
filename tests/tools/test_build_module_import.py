@@ -427,16 +427,21 @@ class SchedulerImportPrepTest(unittest.TestCase):
 
         command = command_by_name(prepared, "First Chat Shoutout")
         all_command = command_by_name(prepared, "First Chat Shoutout All")
+        auto_command = command_by_name(prepared, "First Chat Shoutout Auto Toggle")
         manual_action = action_by_name(prepared, "FCS - Handle Manual Twitch Shoutout")
         manual_all_action = action_by_name(
             prepared,
             "FCS - Handle Manual Twitch Shoutout All",
         )
+        auto_toggle_action = action_by_name(
+            prepared,
+            "FCS - Handle Auto Shoutout Toggle",
+        )
         first_words_action = action_by_name(
             prepared, "FCS - Handle Twitch First Words"
         )
 
-        self.assertEqual(len(prepared["data"]["commands"]), 2)
+        self.assertEqual(len(prepared["data"]["commands"]), 3)
         self.assertEqual(command["name"], "First Chat Shoutout")
         self.assertEqual(command["command"], "!so\r\n!shoutout")
         self.assertFalse(command["enabled"])
@@ -447,7 +452,12 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(all_command["command"], "!soall\r\n!shoutoutall")
         self.assertFalse(all_command["enabled"])
         self.assertEqual(all_command["permittedGroups"], ["Moderators"])
+        self.assertEqual(auto_command["name"], "First Chat Shoutout Auto Toggle")
+        self.assertEqual(auto_command["command"], "!soauto\r\n!shoutoutauto")
+        self.assertFalse(auto_command["enabled"])
+        self.assertEqual(auto_command["permittedGroups"], ["Moderators"])
         self.assertIn(SYSTEM_REFERENCE, action_references(manual_action))
+        self.assertIn(SYSTEM_REFERENCE, action_references(auto_toggle_action))
 
         self.assertEqual(
             manual_action["triggers"],
@@ -474,6 +484,21 @@ class SchedulerImportPrepTest(unittest.TestCase):
                     "id": module.deterministic_id(
                         "first-chat-shoutouts",
                         "trigger:FCS - Handle Manual Twitch Shoutout All:command:First Chat Shoutout All",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(
+            auto_toggle_action["triggers"],
+            [
+                {
+                    "commandId": auto_command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Auto Shoutout Toggle:command:First Chat Shoutout Auto Toggle",
                     ),
                     "type": 401,
                 }
@@ -617,6 +642,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
 
         command = command_by_name(prepared, "First Chat Shoutout")
         all_command = command_by_name(prepared, "First Chat Shoutout All")
+        auto_command = command_by_name(prepared, "First Chat Shoutout Auto Toggle")
         first_words_action = action_by_name(
             prepared, "FCS - Handle Twitch First Words"
         )
@@ -624,6 +650,10 @@ class SchedulerImportPrepTest(unittest.TestCase):
         manual_all_action = action_by_name(
             prepared,
             "FCS - Handle Manual Twitch Shoutout All",
+        )
+        auto_toggle_action = action_by_name(
+            prepared,
+            "FCS - Handle Auto Shoutout Toggle",
         )
         run_action = action_by_name(prepared, "FCS - Run Shoutout")
         reset_action = action_by_name(prepared, "FCS - Reset Stream State")
@@ -637,12 +667,18 @@ class SchedulerImportPrepTest(unittest.TestCase):
             [sub_action["type"] for sub_action in manual_all_action["subActions"]],
             [99999],
         )
+        self.assertEqual(
+            [sub_action["type"] for sub_action in auto_toggle_action["subActions"]],
+            [99999],
+        )
         self.assertEqual(first_words_action["triggers"][0]["type"], 120)
         self.assertEqual(first_words_action["triggers"][0]["username"], None)
         self.assertEqual(manual_action["triggers"][0]["type"], 401)
         self.assertEqual(manual_action["triggers"][0]["commandId"], command["id"])
         self.assertEqual(manual_all_action["triggers"][0]["type"], 401)
         self.assertEqual(manual_all_action["triggers"][0]["commandId"], all_command["id"])
+        self.assertEqual(auto_toggle_action["triggers"][0]["type"], 401)
+        self.assertEqual(auto_toggle_action["triggers"][0]["commandId"], auto_command["id"])
         self.assertEqual(reset_action["triggers"][0]["type"], 14005)
         self.assertEqual(reset_action["triggers"][0]["obsId"], None)
 

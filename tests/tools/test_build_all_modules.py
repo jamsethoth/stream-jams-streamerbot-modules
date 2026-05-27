@@ -95,7 +95,7 @@ class BuildAllModulesTest(unittest.TestCase):
                     / "manifest.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(first_chat_manifest["actionCount"], 6)
+            self.assertEqual(first_chat_manifest["actionCount"], 7)
 
     def test_build_all_modules_is_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

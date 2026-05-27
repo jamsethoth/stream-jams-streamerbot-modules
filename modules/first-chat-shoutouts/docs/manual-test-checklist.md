@@ -32,6 +32,14 @@ Use a disposable Streamer.bot profile and a low-risk Twitch channel before live 
 - Set `automatic.enabled` to `false`, trigger Twitch First Words for another configured person, and confirm `!soall` still includes that person.
 - Run the command as a non-mod if possible and confirm it is denied when `manualAll.moderatorOnly` is `true`.
 
+## Auto Toggle Command Path
+
+- Create moderator-only `!soauto` and `!shoutoutauto` commands for `FCS - Handle Auto Shoutout Toggle`.
+- Run `!soauto off` as a mod and confirm `automatic.enabled` becomes `false`.
+- Trigger Twitch First Words for a configured person and confirm they are tracked for `!soall` but not automatically shouted out.
+- Run `!soauto on` as a mod and confirm `automatic.enabled` becomes `true`.
+- Run the command as a non-mod if possible and confirm it is denied when `autoToggle.moderatorOnly` is `true`.
+
 ## Templates And Fallbacks
 
 - Configure a per-person template and confirm the per-person template overrides the default.
