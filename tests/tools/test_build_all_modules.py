@@ -52,7 +52,7 @@ class BuildAllModulesTest(unittest.TestCase):
 
             self.assertEqual(
                 [module.module_id for module in result.modules],
-                ["activity-gated-chat-announcements"],
+                ["activity-gated-chat-announcements", "first-chat-shoutouts"],
             )
             self.assertTrue(sb_path.is_file())
             self.assertTrue(import_text_path.is_file())
@@ -110,6 +110,14 @@ class BuildAllModulesTest(unittest.TestCase):
             )
             self.assertIn(
                 "activity-gated-chat-announcements/README.md",
+                names,
+            )
+            self.assertIn(
+                "first-chat-shoutouts/first-chat-shoutouts.sb",
+                names,
+            )
+            self.assertIn(
+                "first-chat-shoutouts/README.md",
                 names,
             )
 

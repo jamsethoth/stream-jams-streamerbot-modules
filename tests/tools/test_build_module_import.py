@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_ROOT = ROOT / "modules" / "activity-gated-chat-announcements"
+FIRST_CHAT_MODULE_ROOT = ROOT / "modules" / "first-chat-shoutouts"
 SCRIPT_PATH = ROOT / "tools" / "streamerbot_import" / "build_module_import.py"
 SCHEDULER_CODE_PATH = (
     MODULE_ROOT / "src" / "actions" / "run-announcement-scheduler.cs"
@@ -258,6 +259,97 @@ class SchedulerImportPrepTest(unittest.TestCase):
         )
         for action in prepared["data"]["actions"]:
             self.assertEqual(action["group"], "Activity-Gated Announcements")
+
+    def test_first_chat_shoutouts_import_contains_command_and_first_words_trigger(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "group": "Existing Group",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ],
+                "commands": [],
+                "queues": [],
+                "timers": [],
+                "websocketServers": [],
+                "websocketClients": [],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "first-chat-shoutouts.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            module.prepare_module_import(
+                module_dir=FIRST_CHAT_MODULE_ROOT,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        command = prepared["data"]["commands"][0]
+        manual_action = action_by_name(prepared, "FCS - Handle Manual Twitch Shoutout")
+        first_words_action = action_by_name(
+            prepared, "FCS - Handle Twitch First Words"
+        )
+
+        self.assertEqual(command["name"], "First Chat Shoutout")
+        self.assertEqual(command["command"], "!so\r\n!shoutout")
+        self.assertFalse(command["enabled"])
+        self.assertEqual(command["group"], "First Chat Shoutouts")
+        self.assertEqual(command["permittedGroups"], ["Moderators"])
+        self.assertEqual(command["sources"], 1)
+
+        self.assertEqual(
+            manual_action["triggers"],
+            [
+                {
+                    "commandId": command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Manual Twitch Shoutout:command:First Chat Shoutout",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(
+            first_words_action["triggers"],
+            [
+                {
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Twitch First Words:twitch-first-words",
+                    ),
+                    "isUserId": False,
+                    "type": 120,
+                    "username": "",
+                }
+            ],
+        )
 
     def test_cli_can_build_from_exports_dir(self):
         payload = {

@@ -59,10 +59,12 @@ def prepare_module_import(
         )
         for action in manifest["actions"]
     ]
+    commands = [build_command(manifest, command) for command in manifest.get("commands", [])]
+    attach_configured_triggers(actions, commands, manifest)
     replaced_code_blocks = len(actions)
 
     update_metadata(prepared, manifest)
-    write_bundle_data(prepared, actions)
+    write_bundle_data(prepared, actions, commands)
     write_payload(prepared, output_path)
 
     return PrepResult(replaced_code_blocks, output_path)
@@ -135,6 +137,102 @@ def build_csharp_action(
     ]
     action["collapsedGroups"] = []
     return action
+
+
+def build_command(manifest, command_manifest):
+    command_name = command_manifest["name"]
+    return {
+        "caseSensitive": bool(command_manifest.get("caseSensitive", False)),
+        "command": command_text(command_manifest),
+        "enabled": bool(command_manifest.get("enabled", False)),
+        "globalCooldown": int(command_manifest.get("globalCooldown", 0)),
+        "grantType": int(command_manifest.get("grantType", 0)),
+        "group": command_manifest.get("group", manifest["group"]),
+        "id": deterministic_id(manifest["id"], "command:" + command_name),
+        "ignoreBotAccount": bool(command_manifest.get("ignoreBotAccount", True)),
+        "ignoreInternal": bool(command_manifest.get("ignoreInternal", True)),
+        "include": bool(command_manifest.get("include", True)),
+        "location": int(command_manifest.get("location", 0)),
+        "mode": int(command_manifest.get("mode", 0)),
+        "name": command_name,
+        "permittedGroups": list(command_manifest.get("permittedGroups", [])),
+        "permittedUsers": list(command_manifest.get("permittedUsers", [])),
+        "persistCounter": bool(command_manifest.get("persistCounter", False)),
+        "persistUserCounter": bool(command_manifest.get("persistUserCounter", False)),
+        "regexExplicitCapture": bool(command_manifest.get("regexExplicitCapture", False)),
+        "sources": command_manifest.get("sources", 1),
+        "userCooldown": int(command_manifest.get("userCooldown", 0)),
+    }
+
+
+def command_text(command_manifest):
+    if "command" in command_manifest:
+        return command_manifest["command"]
+
+    aliases = command_manifest.get("aliases", [])
+    if isinstance(aliases, str):
+        return aliases
+
+    return "\r\n".join(aliases)
+
+
+def attach_configured_triggers(actions, commands, manifest):
+    action_by_name = {action["name"]: action for action in actions}
+    command_by_name = {command["name"]: command for command in commands}
+
+    for command_manifest in manifest.get("commands", []):
+        action_name = command_manifest.get("action")
+        if not action_name:
+            continue
+
+        if action_name not in action_by_name:
+            raise ValueError(
+                f"Command '{command_manifest['name']}' references unknown action '{action_name}'."
+            )
+
+        command = command_by_name[command_manifest["name"]]
+        action_by_name[action_name]["triggers"].append(
+            build_command_trigger(manifest, action_name, command_manifest["name"], command)
+        )
+
+    for action_manifest in manifest["actions"]:
+        action_name = action_manifest["name"]
+        action = action_by_name[action_name]
+        for trigger_manifest in action_manifest.get("triggers", []):
+            action["triggers"].append(
+                build_configured_trigger(manifest, action_name, trigger_manifest)
+            )
+
+
+def build_command_trigger(manifest, action_name, command_name, command):
+    return {
+        "commandId": command["id"],
+        "enabled": True,
+        "exclusions": [],
+        "id": deterministic_id(
+            manifest["id"],
+            f"trigger:{action_name}:command:{command_name}",
+        ),
+        "type": 401,
+    }
+
+
+def build_configured_trigger(manifest, action_name, trigger_manifest):
+    trigger_type = trigger_manifest["type"]
+    if trigger_type == "twitch-first-words":
+        return {
+            "enabled": bool(trigger_manifest.get("enabled", True)),
+            "exclusions": list(trigger_manifest.get("exclusions", [])),
+            "id": deterministic_id(
+                manifest["id"],
+                f"trigger:{action_name}:twitch-first-words",
+            ),
+            "isUserId": bool(trigger_manifest.get("isUserId", False)),
+            "type": 120,
+            "username": trigger_manifest.get("username", ""),
+        }
+
+    raise ValueError(f"Unsupported trigger type '{trigger_type}' for action '{action_name}'.")
 
 
 def build_csharp_sub_action(sub_action_template, sub_action_id, code, references):
@@ -218,12 +316,12 @@ def update_metadata(payload, manifest):
     )
 
 
-def write_bundle_data(payload, actions):
+def write_bundle_data(payload, actions, commands=None):
     data = payload.setdefault("data", {})
     data["actions"] = actions
+    data["commands"] = list(commands or [])
     for key in (
         "queues",
-        "commands",
         "websocketServers",
         "websocketClients",
         "timers",

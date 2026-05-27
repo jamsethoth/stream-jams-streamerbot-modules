@@ -1,0 +1,56 @@
+{
+  "id": "first-chat-shoutouts",
+  "name": "First Chat Shoutouts",
+  "version": "0.1.0",
+  "description": "Twitch-first shoutouts for configured first-chat visitors and moderator command invocations.",
+  "license": "AGPL-3.0-or-later",
+  "group": "First Chat Shoutouts",
+  "actions": [
+    {
+      "name": "FCS - Configure Defaults",
+      "source": "src/actions/configure-defaults.cs",
+      "autoRun": true
+    },
+    {
+      "name": "FCS - Handle Twitch First Words",
+      "source": "src/actions/handle-twitch-first-words.cs",
+      "triggers": [
+        {
+          "type": "twitch-first-words"
+        }
+      ]
+    },
+    {
+      "name": "FCS - Handle Manual Twitch Shoutout",
+      "source": "src/actions/handle-manual-twitch-shoutout.cs"
+    },
+    {
+      "name": "FCS - Run Shoutout",
+      "source": "src/actions/run-shoutout.cs"
+    },
+    {
+      "name": "FCS - Reset Stream State",
+      "source": "src/actions/reset-stream-state.cs"
+    }
+  ],
+  "commands": [
+    {
+      "name": "First Chat Shoutout",
+      "action": "FCS - Handle Manual Twitch Shoutout",
+      "aliases": [
+        "!so",
+        "!shoutout"
+      ],
+      "enabled": false,
+      "group": "First Chat Shoutouts",
+      "permittedGroups": [
+        "Moderators"
+      ],
+      "sources": 1
+    }
+  ],
+  "defaultConfig": "src/config/default-config.json",
+  "references": [
+    "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
+  ]
+}

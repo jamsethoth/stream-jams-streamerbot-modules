@@ -7,6 +7,7 @@ This repository is organized as a small monorepo. Each module owns its Streamer.
 ## Modules
 
 - `modules/activity-gated-chat-announcements`: recurring chat announcements that only post after enough real chat activity has occurred.
+- `modules/first-chat-shoutouts`: Twitch-first shoutouts for configured first-chat visitors and moderator command invocations.
 
 ## Layout
 
