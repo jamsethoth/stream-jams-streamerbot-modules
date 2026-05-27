@@ -29,6 +29,7 @@ EXPECTED_ACTION_NAMES = {
 SYSTEM_CORE_REFERENCE = (
     "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
 )
+SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
 
 
 def load_script():
@@ -356,6 +357,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(command["group"], "First Chat Shoutouts")
         self.assertEqual(command["permittedGroups"], ["Moderators"])
         self.assertEqual(command["sources"], 1)
+        self.assertIn(SYSTEM_REFERENCE, action_references(manual_action))
 
         self.assertEqual(
             manual_action["triggers"],

@@ -25,13 +25,14 @@ Use a disposable Streamer.bot profile first. The generated `.sb` imports actions
 
 ## C# References
 
-The generated C# sub-actions include a `System.Core.dll` reference because the module uses framework types. The default import reference is:
+The generated C# sub-actions include framework references because the module uses regular expressions and other framework types. The default import references are:
 
 ```text
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.dll
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll
 ```
 
-If Streamer.bot reports a missing metadata/reference file while compiling the imported C# actions, edit each imported C# sub-action's references to point at the `System.Core.dll` path on that machine.
+If Streamer.bot reports a missing metadata/reference file while compiling the imported C# actions, edit each imported C# sub-action's references to point at those framework DLL paths on that machine.
 
 ## Configuration
 

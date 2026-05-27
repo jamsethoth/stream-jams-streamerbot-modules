@@ -87,6 +87,10 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertTrue(manifest["actions"][0]["autoRun"])
         self.assertEqual(manifest["defaultConfig"], "src/config/default-config.json")
         self.assertIn(
+            "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll",
+            manifest["references"],
+        )
+        self.assertIn(
             "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll",
             manifest["references"],
         )
