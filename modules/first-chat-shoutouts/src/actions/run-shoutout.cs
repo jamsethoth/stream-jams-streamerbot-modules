@@ -48,6 +48,7 @@ public class CPHInline
         }
 
         bool automatic = IsAutomaticSource(shoutoutSource);
+        bool manualAll = IsManualAllSource(shoutoutSource);
         JObject person = FindPerson(config, shoutoutLogin);
         bool personEnabled = person != null && IsEnabled(person["enabled"], true);
 
@@ -80,6 +81,31 @@ public class CPHInline
                     CPH.LogInfo($"[FCS] Automatic shoutout skipped for already handled login '{shoutoutLogin}'.");
                 }
 
+                return true;
+            }
+        }
+        else if (manualAll)
+        {
+            JObject manualAllConfig = config["manualAll"] as JObject;
+            if (!IsEnabled(manualAllConfig == null ? null : manualAllConfig["enabled"], true))
+            {
+                return true;
+            }
+
+            if (!IncludesTarget(manualAllConfig, targetId))
+            {
+                return true;
+            }
+
+            if (IsEnabled(manualAllConfig == null ? null : manualAllConfig["moderatorOnly"], true) && !CallerIsModeratorOrBroadcaster())
+            {
+                CPH.LogWarn($"[FCS] Manual shoutout-all denied for '{shoutoutLogin}' because caller is not a moderator or broadcaster.");
+                return true;
+            }
+
+            if (!personEnabled)
+            {
+                CPH.LogWarn($"[FCS] Manual shoutout-all skipped for unconfigured login '{shoutoutLogin}'.");
                 return true;
             }
         }
@@ -377,6 +403,11 @@ public class CPHInline
     private bool IsAutomaticSource(string source)
     {
         return string.Equals(NormalizeKey(source), "automatic", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsManualAllSource(string source)
+    {
+        return string.Equals(NormalizeKey(source), "manual_all", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsTwitchTarget(JObject target)

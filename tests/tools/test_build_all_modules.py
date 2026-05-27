@@ -88,6 +88,14 @@ class BuildAllModulesTest(unittest.TestCase):
                 [1026, 99999],
             )
             self.assertEqual(first_chat_reset_action["triggers"][0]["type"], 14005)
+            first_chat_manifest = json.loads(
+                (
+                    output_root
+                    / "first-chat-shoutouts"
+                    / "manifest.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(first_chat_manifest["actionCount"], 6)
 
     def test_build_all_modules_is_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

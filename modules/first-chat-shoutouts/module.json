@@ -25,6 +25,10 @@
       "source": "src/actions/handle-manual-twitch-shoutout.cs"
     },
     {
+      "name": "FCS - Handle Manual Twitch Shoutout All",
+      "source": "src/actions/handle-manual-twitch-shoutout-all.cs"
+    },
+    {
       "name": "FCS - Run Shoutout",
       "source": "src/actions/run-shoutout.cs"
     },
@@ -45,6 +49,20 @@
       "aliases": [
         "!so",
         "!shoutout"
+      ],
+      "enabled": false,
+      "group": "First Chat Shoutouts",
+      "permittedGroups": [
+        "Moderators"
+      ],
+      "sources": 1
+    },
+    {
+      "name": "First Chat Shoutout All",
+      "action": "FCS - Handle Manual Twitch Shoutout All",
+      "aliases": [
+        "!soall",
+        "!shoutoutall"
       ],
       "enabled": false,
       "group": "First Chat Shoutouts",

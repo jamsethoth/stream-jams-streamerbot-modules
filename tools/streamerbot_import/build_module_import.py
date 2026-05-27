@@ -130,16 +130,24 @@ def find_csharp_action_template(payload):
 
 def select_action_templates(payload, manifest):
     exported_actions = payload.get("data", {}).get("actions", [])
-    required_count = len(manifest["actions"])
-    candidate_actions = exported_actions[:required_count]
-
-    if len(candidate_actions) == required_count and all(
-        action_has_csharp_code(action) for action in candidate_actions
-    ):
-        return candidate_actions
-
     action_template, _ = find_csharp_action_template(payload)
-    return [action_template for _ in manifest["actions"]]
+    templates_by_key = {
+        action_template_key(action.get("name", "")): action
+        for action in exported_actions
+        if action_has_csharp_code(action)
+    }
+
+    return [
+        templates_by_key.get(action_template_key(action["name"]), action_template)
+        for action in manifest["actions"]
+    ]
+
+
+def action_template_key(action_name):
+    name = (action_name or "").strip().lower()
+    if " - " in name:
+        name = name.split(" - ", 1)[1]
+    return " ".join(name.split())
 
 
 def action_has_csharp_code(action):

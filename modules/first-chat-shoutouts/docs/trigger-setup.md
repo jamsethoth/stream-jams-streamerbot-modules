@@ -8,9 +8,9 @@ The generated import attaches the Twitch `First Words` trigger to:
 FCS - Handle Twitch First Words
 ```
 
-Inspect the imported action and confirm the trigger is present and enabled. That wrapper reads the chatter login from the trigger arguments, sets `targetId=twitch_main`, sets `shoutoutSource=automatic`, and runs `FCS - Run Shoutout`.
+Inspect the imported action and confirm the trigger is present and enabled. That wrapper reads the chatter login from the trigger arguments, records enabled configured people in stream-entry order for `!soall`, sets `targetId=twitch_main`, sets `shoutoutSource=automatic`, and runs `FCS - Run Shoutout`.
 
-Automatic shoutouts only run for enabled logins listed in `firstChatShoutouts.config`.
+Automatic shoutouts only run for enabled logins listed in `firstChatShoutouts.config` when `automatic.enabled` is `true`. The stream-entry tracking still runs when automatic shoutouts are disabled.
 
 ## Stream Start Reset
 

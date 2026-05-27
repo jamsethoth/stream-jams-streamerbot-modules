@@ -24,6 +24,14 @@ Use a disposable Streamer.bot profile and a low-risk Twitch channel before live 
 - Run `!so somecreator` as a mod and confirm the manual command shouts out that Twitch login even when it is not in `people`.
 - Run the command as a non-mod if possible and confirm it is denied when `manual.moderatorOnly` is `true`.
 
+## Manual All Command Path
+
+- Create moderator-only `!soall` and `!shoutoutall` commands for `FCS - Handle Manual Twitch Shoutout All`.
+- Trigger Twitch First Words for two enabled configured people and confirm `firstChatShoutouts.entered.twitch_main.<session>` stores them in first-entry order.
+- Run `!soall` as a mod and confirm each entered configured person is shouted out in order, even if one was already automatically shouted out earlier in the stream.
+- Set `automatic.enabled` to `false`, trigger Twitch First Words for another configured person, and confirm `!soall` still includes that person.
+- Run the command as a non-mod if possible and confirm it is denied when `manualAll.moderatorOnly` is `true`.
+
 ## Templates And Fallbacks
 
 - Configure a per-person template and confirm the per-person template overrides the default.

@@ -63,6 +63,17 @@ public class CPHInline
       ""!shoutout""
     ]
   },
+  ""manualAll"": {
+    ""enabled"": true,
+    ""targetIds"": [
+      ""twitch_main""
+    ],
+    ""moderatorOnly"": true,
+    ""aliases"": [
+      ""!soall"",
+      ""!shoutoutall""
+    ]
+  },
   ""people"": [
     {
       ""login"": ""examplecreator"",

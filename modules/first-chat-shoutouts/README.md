@@ -2,7 +2,7 @@
 
 ## What It Does
 
-First Chat Shoutouts watches Twitch first-chat events and automatically shouts out a configured list of people once per stream. It also provides a moderator command path, such as `!so <login>` or `!shoutout <login>`, that can shout out any Twitch login without adding that person to the automatic list.
+First Chat Shoutouts watches Twitch first-chat events and automatically shouts out a configured list of people once per stream. It also provides moderator command paths: `!so <login>` / `!shoutout <login>` for one Twitch login, and `!soall` / `!shoutoutall` for every configured person who has spoken so far this stream in first-entry order.
 
 For each shoutout, the module attempts Twitch's native shoutout and always sends a custom Twitch announcement. Announcement text can be customized per configured person and falls back to a default template. Templates can reference the person's latest Twitch game, with a configurable fallback when Twitch has no game available.
 
@@ -18,7 +18,7 @@ The MVP ships with Twitch wiring only. The config keeps target IDs and target pl
 6. Open the imported actions and compile the C# sub-actions.
 7. Run `FCS - Configure Defaults` if Streamer.bot does not auto-run it after import.
 8. Confirm the imported Twitch First Words trigger is attached to `FCS - Handle Twitch First Words`.
-9. Enable the imported `!so` / `!shoutout` command if you want the manual moderator command live.
+9. Enable the imported `!so` / `!shoutout` and `!soall` / `!shoutoutall` commands if you want the manual moderator commands live.
 10. Confirm `FCS - Reset Stream State` has the Stream Online trigger and `Reset First Words` sub-action.
 
 Use a disposable Streamer.bot profile first. The generated `.sb` imports actions, the manual command, the Twitch First Words trigger, and the stream-start reset flow, but all imported wiring should still be inspected before live use.
@@ -51,6 +51,12 @@ Important fields:
 {
   "lastGameFallback": "something excellent",
   "defaultAnnouncementTemplate": "Go follow @{login} at https://twitch.tv/{login}! They were last streaming {lastGame}.",
+  "automatic": {
+    "enabled": true
+  },
+  "manualAll": {
+    "enabled": true
+  },
   "people": [
     {
       "login": "examplecreator",
@@ -61,7 +67,7 @@ Important fields:
 }
 ```
 
-Automatic shoutouts only run for enabled logins in `people`. Manual commands can shout out any Twitch login by default because `manual.allowAnyLogin` is `true`.
+Automatic shoutouts only run for enabled logins in `people` when `automatic.enabled` is `true`. First-chat tracking still happens when automatic shoutouts are disabled, so `!soall` can shout out configured people who have spoken so far. Manual single-user commands can shout out any Twitch login by default because `manual.allowAnyLogin` is `true`.
 
 Supported template tokens:
 
@@ -90,13 +96,16 @@ The generated import creates these actions:
 FCS - Configure Defaults
 FCS - Handle Twitch First Words
 FCS - Handle Manual Twitch Shoutout
+FCS - Handle Manual Twitch Shoutout All
 FCS - Run Shoutout
 FCS - Reset Stream State
 ```
 
-`FCS - Handle Twitch First Words` reads the Twitch chatter login, sets `targetId=twitch_main`, marks the source as `automatic`, and calls `FCS - Run Shoutout`.
+`FCS - Handle Twitch First Words` reads the Twitch chatter login, records enabled configured people in first-entry order for the stream, sets `targetId=twitch_main`, marks the source as `automatic`, and calls `FCS - Run Shoutout`.
 
 `FCS - Handle Manual Twitch Shoutout` parses the first typed command argument, sets `targetId=twitch_main`, marks the source as `manual`, and calls `FCS - Run Shoutout`.
+
+`FCS - Handle Manual Twitch Shoutout All` reads the stream's entered configured chatter list and calls `FCS - Run Shoutout` for each login in order with `shoutoutSource=manual_all`. It ignores whether the person was already automatically shouted out earlier in the stream.
 
 `FCS - Run Shoutout` reads config, checks eligibility, fetches Twitch user info, attempts the native Twitch shoutout, sends the Twitch announcement, and records the login as handled for the current stream session.
 
@@ -108,7 +117,8 @@ The module writes persisted, namespaced globals:
 
 ```text
 firstChatShoutouts.sent.<targetId>.<streamSessionId>.<login>
+firstChatShoutouts.entered.<targetId>.<streamSessionId>
 firstChatShoutouts.streamSessionId
 ```
 
-Automatic shoutouts skip logins already marked for the current session. Manual commands bypass that skip so moderators can intentionally shout someone out again, but a manual shoutout still marks that login handled for the automatic path.
+Automatic shoutouts skip logins already marked for the current session. Manual commands and shoutout-all bypass that skip so moderators can intentionally shout someone out again, but a manual shoutout still marks that login handled for the automatic path.
