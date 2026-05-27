@@ -22,6 +22,7 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
             "references/local-api.md",
             "references/variables-state.md",
             "scripts/fixtures/streamerbot-1.0.4-csharp-stub.json",
+            "scripts/fixtures/streamerbot-import-stub.sb",
             "scripts/sb_import_string.py",
             "scripts/streamerbot_sb_import_gen.py",
         ]
@@ -39,6 +40,7 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
 
         self.assertIn("name: streamerbot-config", skill)
         self.assertIn("streamerbot_sb_import_gen.py", skill)
+        self.assertIn("streamerbot-import-stub.sb", import_reference)
         self.assertIn("type: 401", import_reference)
         self.assertIn("Reset First Words", import_reference)
 
@@ -83,6 +85,36 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
         self.assertEqual(inspected["meta"]["name"], "First Chat Shoutouts")
         self.assertEqual(inspected["counts"]["actions"], 7)
         self.assertEqual(inspected["counts"]["commands"], 3)
+
+    def test_bundled_reference_stub_decodes(self):
+        env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts" / "sb_import_string.py"),
+                "inspect",
+                str(
+                    SKILL_ROOT
+                    / "scripts"
+                    / "fixtures"
+                    / "streamerbot-import-stub.sb"
+                ),
+            ],
+            cwd=ROOT,
+            env=env,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        inspected = json.loads(result.stdout)
+
+        self.assertEqual(inspected["version"], 23)
+        self.assertEqual(inspected["exportedFrom"], "1.0.4")
+        self.assertEqual(inspected["counts"]["actions"], 5)
+        self.assertEqual(inspected["counts"]["commands"], 1)
 
 
 if __name__ == "__main__":

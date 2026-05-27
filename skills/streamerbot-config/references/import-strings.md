@@ -84,6 +84,11 @@ The script is intentionally narrow: it is for modern `SBAE` imports. If it rejec
 
 The skill also includes `scripts/streamerbot_sb_import_gen.py` for fixture-driven module imports. Use it when a repository has a module manifest with Streamer.bot action source files.
 
+Bundled fixtures:
+
+- `scripts/fixtures/streamerbot-1.0.4-csharp-stub.json`: minimal current C# action fixture for pure C# action cloning.
+- `scripts/fixtures/streamerbot-import-stub.sb`: same-version Streamer.bot 1.0.4 export reference containing multiple actions, command wiring, triggers, and a built-in reset sub-action.
+
 Build from a manifest `importStub` or the bundled generic C# stub:
 
 ```bash

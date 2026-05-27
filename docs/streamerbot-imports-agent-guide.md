@@ -13,6 +13,7 @@ Use these local files before relying on memory:
 - `tools/streamerbot_import/fixtures/streamerbot-1.0.4-first-chat-shoutouts-stub.json`: module-specific fixture that preserves First Chat Shoutouts trigger and reset-action shapes.
 - `skills/streamerbot-config/`: installable Codex skill bundle containing the reconciled import reference and bundled helper scripts.
 - `skills/streamerbot-config/scripts/streamerbot_sb_import_gen.py`: installable fixture-driven import generator for module manifests.
+- `skills/streamerbot-config/scripts/fixtures/streamerbot-import-stub.sb`: user-provided Streamer.bot 1.0.4 export preserved as the single `.sb` reference fixture.
 - `docs/research/2026-05-27-streamerbot-import-command-trigger-shapes.md`: research notes from official docs, approved extensions, and the user-provided Streamer.bot 1.0.4 stub.
 - `tests/tools/test_build_module_import.py`: executable specification for generated command, trigger, reference, and template behavior.
 

@@ -45,7 +45,7 @@ For implementation details intended for future agents and skill updates, see `do
 
 ## Installable Codex Skill
 
-This repository includes the Streamer.bot Codex skill at `skills/streamerbot-config/`. The skill bundle includes `SKILL.md`, reference docs, UI metadata, `scripts/sb_import_string.py` for inspect/decode/encode, and `scripts/streamerbot_sb_import_gen.py` for fixture-driven `.sb` generation from module manifests.
+This repository includes the Streamer.bot Codex skill at `skills/streamerbot-config/`. The skill bundle includes `SKILL.md`, reference docs, UI metadata, `scripts/sb_import_string.py` for inspect/decode/encode, `scripts/streamerbot_sb_import_gen.py` for fixture-driven `.sb` generation from module manifests, and same-version Streamer.bot import fixtures for future reference.
 
 To install it into a local Codex skills directory, copy or sync `skills/streamerbot-config/` to `$CODEX_HOME/skills/streamerbot-config/`.
 
