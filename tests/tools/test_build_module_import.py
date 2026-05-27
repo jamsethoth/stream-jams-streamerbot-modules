@@ -192,6 +192,78 @@ class SchedulerImportPrepTest(unittest.TestCase):
                     output_path=output_path,
                 )
 
+    def test_rejects_missing_framework_reference_for_using_directive(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            module_dir = Path(tmp_dir) / "regex-module"
+            action_dir = module_dir / "src" / "actions"
+            action_dir.mkdir(parents=True)
+            (action_dir / "uses-regex.cs").write_text(
+                (
+                    "using System;\n"
+                    "using System.Text.RegularExpressions;\n\n"
+                    "public class CPHInline { public bool Execute() { return true; } }\n"
+                ),
+                encoding="utf-8",
+            )
+            (module_dir / "module.json").write_text(
+                json.dumps(
+                    {
+                        "id": "regex-module",
+                        "name": "Regex Module",
+                        "version": "0.1.0",
+                        "description": "Fixture",
+                        "group": "Fixture",
+                        "actions": [
+                            {
+                                "name": "Fixture - Uses Regex",
+                                "source": "src/actions/uses-regex.cs",
+                            }
+                        ],
+                        "references": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "prepared.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "System.Text.RegularExpressions.*System.dll",
+            ):
+                module.prepare_module_import(
+                    module_dir=module_dir,
+                    input_path=input_path,
+                    output_path=output_path,
+                )
+
     def test_prepares_scheduler_import_with_base64_bytecode_field(self):
         module = load_script()
         original_code = "public class CPHInline { public bool Execute() { return true; } }"

@@ -6,6 +6,7 @@ import base64
 import binascii
 import copy
 import json
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -26,6 +27,11 @@ except ImportError:
 SYSTEM_CORE_REFERENCE = (
     "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
 )
+SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
+REQUIRED_REFERENCES_BY_USING = {
+    "System.Linq": SYSTEM_CORE_REFERENCE,
+    "System.Text.RegularExpressions": SYSTEM_REFERENCE,
+}
 
 
 class PrepResult:
@@ -49,6 +55,7 @@ def prepare_module_import(
     references = list(manifest.get("references", []))
     if SYSTEM_CORE_REFERENCE not in references:
         references.append(SYSTEM_CORE_REFERENCE)
+    validate_csharp_references(module_dir, manifest, references)
 
     actions = [
         build_csharp_action(
@@ -140,6 +147,69 @@ def action_has_csharp_code(action):
         sub_action_has_csharp_code(sub_action)
         for sub_action in action.get("subActions", [])
     )
+
+
+def validate_csharp_references(module_dir, manifest, references):
+    normalized_references = {normalize_reference(reference) for reference in references}
+    missing = []
+
+    for action in manifest["actions"]:
+        source_path = Path(module_dir) / action["source"]
+        code = source_path.read_text(encoding="utf-8")
+
+        for namespace in extract_using_namespaces(code):
+            required_reference = required_reference_for_namespace(namespace)
+            if not required_reference:
+                continue
+
+            if normalize_reference(required_reference) not in normalized_references:
+                missing.append(
+                    {
+                        "action": action["name"],
+                        "source": action["source"],
+                        "namespace": namespace,
+                        "reference": required_reference,
+                    }
+                )
+
+    if missing:
+        details = "; ".join(
+            (
+                f"{item['source']} ({item['action']}) uses {item['namespace']} "
+                f"and requires {item['reference']}"
+            )
+            for item in missing
+        )
+        raise ValueError(
+            f"Module '{manifest['id']}' is missing C# references: {details}"
+        )
+
+
+def extract_using_namespaces(code):
+    namespaces = []
+    for line in code.splitlines():
+        match = re.match(
+            r"^\s*using\s+(?:static\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?"
+            r"([A-Za-z_][A-Za-z0-9_.]*)\s*;",
+            line,
+        )
+        if match:
+            namespaces.append(match.group(1))
+    return namespaces
+
+
+def required_reference_for_namespace(namespace):
+    for reference_namespace, reference in REQUIRED_REFERENCES_BY_USING.items():
+        if namespace == reference_namespace or namespace.startswith(
+            reference_namespace + "."
+        ):
+            return reference
+
+    return None
+
+
+def normalize_reference(reference):
+    return str(reference).replace("/", "\\").lower()
 
 
 def sub_action_has_csharp_code(sub_action):

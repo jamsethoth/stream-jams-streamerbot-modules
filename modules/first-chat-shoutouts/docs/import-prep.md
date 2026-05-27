@@ -30,5 +30,6 @@ In a disposable Streamer.bot profile:
 ## Failure Modes
 
 - If the script says no C# code block was found, the committed fixture or custom stub does not contain a recognizable Streamer.bot C# action shape.
+- If the script says a C# reference is missing, add the required framework DLL path to the module manifest's `references` list before rebuilding.
 - If Streamer.bot rejects the prepared `.sb`, decode the stub and prepared files to JSON and compare the action shape.
 - If an imported action does not compile, inspect that action's C# source and Streamer.bot's compile output before using the module live.
