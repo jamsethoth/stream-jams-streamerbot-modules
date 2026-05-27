@@ -2,7 +2,7 @@
 
 Use this workflow to prepare First Chat Shoutouts as a Streamer.bot import without inventing an untested C# action schema.
 
-The repository includes a committed Streamer.bot 1.0.4 C# action fixture. Normal builds use that fixture in CI, releases, and local development.
+The repository includes a generic Streamer.bot 1.0.4 C# action fixture and a module-specific First Chat Shoutouts fixture. Normal builds use the module-specific fixture so the reset action keeps Streamer.bot's built-in `Reset First Words` sub-action and stream-start trigger shape.
 
 ## 1. Build The Import
 
@@ -14,7 +14,7 @@ python3 -m tools.streamerbot_import.build_module_import \
   build/first-chat-shoutouts.sb
 ```
 
-The script clones the committed C# action shape, replaces the source code with this module's actions, and writes an experimental `.sb` file.
+The script maps the committed fixture's action shapes onto this module, replaces the C# source code, creates the command record, and writes an experimental `.sb` file.
 
 ## 2. Import And Inspect
 
@@ -25,7 +25,7 @@ In a disposable Streamer.bot profile:
 3. Confirm the import contains the `FCS - ...` actions.
 4. Open the imported actions and compile the C# sub-actions.
 5. Run `FCS - Configure Defaults` if Streamer.bot does not auto-run it after import.
-6. Wire the triggers and commands from the setup docs before live use.
+6. Inspect the triggers and command from the setup docs before live use.
 
 ## Failure Modes
 

@@ -37,30 +37,33 @@ class PrepResult:
 def prepare_module_import(
     module_dir,
     output_path,
-    input_path=DEFAULT_STUB_PATH,
+    input_path=None,
 ):
     module_dir = Path(module_dir)
     manifest = load_module_manifest(module_dir)
+    input_path = resolve_input_path(manifest, input_path)
     payload = read_payload(input_path)
     prepared = copy.deepcopy(payload)
-    action_template, sub_action_template = find_csharp_action_template(prepared)
-    references = manifest.get("references", [])
+    action_templates = select_action_templates(prepared, manifest)
+    trigger_templates = collect_trigger_templates(prepared)
+    references = list(manifest.get("references", []))
     if SYSTEM_CORE_REFERENCE not in references:
         references.append(SYSTEM_CORE_REFERENCE)
 
     actions = [
         build_csharp_action(
-            action_template,
-            sub_action_template,
+            action_templates[index],
             manifest,
             action,
             module_dir / action["source"],
             references,
         )
-        for action in manifest["actions"]
+        for index, action in enumerate(manifest["actions"])
     ]
-    commands = [build_command(manifest, command) for command in manifest.get("commands", [])]
-    attach_configured_triggers(actions, commands, manifest)
+    commands = [
+        build_command(manifest, command) for command in manifest.get("commands", [])
+    ]
+    attach_configured_triggers(actions, commands, manifest, trigger_templates)
     replaced_code_blocks = len(actions)
 
     update_metadata(prepared, manifest)
@@ -68,6 +71,22 @@ def prepare_module_import(
     write_payload(prepared, output_path)
 
     return PrepResult(replaced_code_blocks, output_path)
+
+
+def resolve_input_path(manifest, input_path):
+    if input_path is not None:
+        return Path(input_path)
+
+    import_stub = manifest.get("importStub")
+    if import_stub:
+        module_stub_path = REPO_ROOT / import_stub
+        if not module_stub_path.is_file():
+            raise ValueError(
+                f"Module '{manifest['id']}' references missing import stub: {import_stub}"
+            )
+        return module_stub_path
+
+    return DEFAULT_STUB_PATH
 
 
 def prepare_scheduler_import(input_path, output_path, scheduler_code_path=None):
@@ -102,6 +121,27 @@ def find_csharp_action_template(payload):
     )
 
 
+def select_action_templates(payload, manifest):
+    exported_actions = payload.get("data", {}).get("actions", [])
+    required_count = len(manifest["actions"])
+    candidate_actions = exported_actions[:required_count]
+
+    if len(candidate_actions) == required_count and all(
+        action_has_csharp_code(action) for action in candidate_actions
+    ):
+        return candidate_actions
+
+    action_template, _ = find_csharp_action_template(payload)
+    return [action_template for _ in manifest["actions"]]
+
+
+def action_has_csharp_code(action):
+    return any(
+        sub_action_has_csharp_code(sub_action)
+        for sub_action in action.get("subActions", [])
+    )
+
+
 def sub_action_has_csharp_code(sub_action):
     return any(
         isinstance(value, str)
@@ -115,7 +155,6 @@ def sub_action_has_csharp_code(sub_action):
 
 def build_csharp_action(
     action_template,
-    sub_action_template,
     manifest,
     action_manifest,
     source_path,
@@ -124,7 +163,6 @@ def build_csharp_action(
     action = copy.deepcopy(action_template)
     action_name = action_manifest["name"]
     action_id = deterministic_id(manifest["id"], "action:" + action_name)
-    sub_action_id = deterministic_id(manifest["id"], "subaction:" + action_name)
     code = Path(source_path).read_text(encoding="utf-8")
 
     action["id"] = action_id
@@ -132,10 +170,14 @@ def build_csharp_action(
     action["group"] = manifest["group"]
     action["enabled"] = True
     action["triggers"] = []
-    action["subActions"] = [
-        build_csharp_sub_action(sub_action_template, sub_action_id, code, references)
-    ]
-    action["collapsedGroups"] = []
+    action["subActions"] = build_sub_actions(
+        action_template,
+        manifest,
+        action_name,
+        code,
+        references,
+    )
+    action.setdefault("collapsedGroups", [])
     return action
 
 
@@ -176,7 +218,8 @@ def command_text(command_manifest):
     return "\r\n".join(aliases)
 
 
-def attach_configured_triggers(actions, commands, manifest):
+def attach_configured_triggers(actions, commands, manifest, trigger_templates=None):
+    trigger_templates = trigger_templates or {}
     action_by_name = {action["name"]: action for action in actions}
     command_by_name = {command["name"]: command for command in commands}
 
@@ -192,7 +235,13 @@ def attach_configured_triggers(actions, commands, manifest):
 
         command = command_by_name[command_manifest["name"]]
         action_by_name[action_name]["triggers"].append(
-            build_command_trigger(manifest, action_name, command_manifest["name"], command)
+            build_command_trigger(
+                manifest,
+                action_name,
+                command_manifest["name"],
+                command,
+                trigger_templates.get(401),
+            )
         )
 
     for action_manifest in manifest["actions"]:
@@ -200,50 +249,130 @@ def attach_configured_triggers(actions, commands, manifest):
         action = action_by_name[action_name]
         for trigger_manifest in action_manifest.get("triggers", []):
             action["triggers"].append(
-                build_configured_trigger(manifest, action_name, trigger_manifest)
+                build_configured_trigger(
+                    manifest,
+                    action_name,
+                    trigger_manifest,
+                    trigger_templates,
+                )
             )
 
 
-def build_command_trigger(manifest, action_name, command_name, command):
-    return {
-        "commandId": command["id"],
-        "enabled": True,
-        "exclusions": [],
-        "id": deterministic_id(
-            manifest["id"],
-            f"trigger:{action_name}:command:{command_name}",
-        ),
-        "type": 401,
-    }
-
-
-def build_configured_trigger(manifest, action_name, trigger_manifest):
-    trigger_type = trigger_manifest["type"]
-    if trigger_type == "twitch-first-words":
-        return {
-            "enabled": bool(trigger_manifest.get("enabled", True)),
-            "exclusions": list(trigger_manifest.get("exclusions", [])),
+def build_command_trigger(
+    manifest,
+    action_name,
+    command_name,
+    command,
+    trigger_template=None,
+):
+    trigger = copy.deepcopy(trigger_template or {})
+    trigger.update(
+        {
+            "commandId": command["id"],
+            "enabled": True,
+            "exclusions": list(trigger.get("exclusions", [])),
             "id": deterministic_id(
                 manifest["id"],
-                f"trigger:{action_name}:twitch-first-words",
+                f"trigger:{action_name}:command:{command_name}",
             ),
-            "isUserId": bool(trigger_manifest.get("isUserId", False)),
-            "type": 120,
-            "username": trigger_manifest.get("username", ""),
+            "type": 401,
         }
+    )
+    return trigger
+
+
+def build_configured_trigger(
+    manifest,
+    action_name,
+    trigger_manifest,
+    trigger_templates=None,
+):
+    trigger_templates = trigger_templates or {}
+    trigger_type = trigger_manifest["type"]
+    if trigger_type == "twitch-first-words":
+        trigger = copy.deepcopy(trigger_templates.get(120, {}))
+        trigger.update(
+            {
+                "enabled": bool(trigger_manifest.get("enabled", True)),
+                "exclusions": list(trigger_manifest.get("exclusions", [])),
+                "id": deterministic_id(
+                    manifest["id"],
+                    f"trigger:{action_name}:twitch-first-words",
+                ),
+                "isUserId": bool(trigger_manifest.get("isUserId", False)),
+                "type": 120,
+                "username": trigger_manifest.get(
+                    "username",
+                    trigger.get("username", ""),
+                ),
+            }
+        )
+        return trigger
+
+    if trigger_type == "twitch-stream-online":
+        trigger = copy.deepcopy(trigger_templates.get(14005, {}))
+        trigger.update(
+            {
+                "enabled": bool(trigger_manifest.get("enabled", True)),
+                "exclusions": list(trigger_manifest.get("exclusions", [])),
+                "id": deterministic_id(
+                    manifest["id"],
+                    f"trigger:{action_name}:twitch-stream-online",
+                ),
+                "obsId": trigger_manifest.get("obsId", trigger.get("obsId")),
+                "type": 14005,
+            }
+        )
+        return trigger
 
     raise ValueError(f"Unsupported trigger type '{trigger_type}' for action '{action_name}'.")
 
 
-def build_csharp_sub_action(sub_action_template, sub_action_id, code, references):
-    sub_action = copy.deepcopy(sub_action_template)
-    sub_action["id"] = sub_action_id
-    sub_action["index"] = 0
-    sub_action["enabled"] = True
-    for reference in references:
-        ensure_reference(sub_action, reference)
-    set_csharp_code(sub_action, code)
-    return sub_action
+def collect_trigger_templates(payload):
+    templates = {}
+    for action in payload.get("data", {}).get("actions", []):
+        for trigger in action.get("triggers", []):
+            trigger_type = trigger.get("type")
+            if trigger_type is not None and trigger_type not in templates:
+                templates[trigger_type] = trigger
+    return templates
+
+
+def build_sub_actions(action_template, manifest, action_name, code, references):
+    rebuilt_sub_actions = []
+    id_map = {}
+    csharp_blocks = 0
+
+    for index, sub_action_template in enumerate(action_template.get("subActions", [])):
+        sub_action = copy.deepcopy(sub_action_template)
+        old_id = sub_action.get("id")
+        sub_action["id"] = deterministic_id(
+            manifest["id"],
+            f"subaction:{action_name}:{index}:{sub_action.get('type', 'unknown')}",
+        )
+        sub_action["index"] = index
+        sub_action["enabled"] = bool(sub_action.get("enabled", True))
+
+        if old_id:
+            id_map[old_id] = sub_action["id"]
+
+        if sub_action_has_csharp_code(sub_action):
+            csharp_blocks += 1
+            for reference in references:
+                ensure_reference(sub_action, reference)
+            set_csharp_code(sub_action, code)
+
+        rebuilt_sub_actions.append(sub_action)
+
+    if csharp_blocks == 0:
+        raise ValueError(f"Action template for '{action_name}' has no C# code block.")
+
+    for sub_action in rebuilt_sub_actions:
+        parent_id = sub_action.get("parentId")
+        if parent_id in id_map:
+            sub_action["parentId"] = id_map[parent_id]
+
+    return rebuilt_sub_actions
 
 
 def ensure_reference(sub_action, reference):
@@ -271,7 +400,9 @@ def set_csharp_code(sub_action, code):
 
 def deterministic_id(module_id, name):
     namespace = uuid.uuid5(uuid.NAMESPACE_URL, "streamerbot-module:" + module_id)
-    return str(uuid.uuid5(namespace, name))
+    # Streamer.bot exports use UUIDv4-shaped IDs. Keep generation deterministic for
+    # reproducible artifacts while matching the version bits observed in exports.
+    return str(uuid.UUID(bytes=uuid.uuid5(namespace, name).bytes, version=4))
 
 
 def is_csharp_code_field(key, value):
@@ -347,13 +478,13 @@ def main():
     )
     parser.add_argument(
         "--stub",
-        default=DEFAULT_STUB_PATH,
+        default=None,
         help="Optional custom exported C# action stub .sb or .json.",
     )
     args = parser.parse_args()
 
     if len(args.paths) == 1:
-        input_path = Path(args.stub)
+        input_path = Path(args.stub) if args.stub else None
         output_path = Path(args.paths[0])
     elif len(args.paths) == 2:
         input_path = Path(args.paths[0])

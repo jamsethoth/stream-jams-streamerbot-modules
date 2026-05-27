@@ -13,6 +13,7 @@ Research date: 2026-05-27
 - Shoutout Clip Playing: searched and downloaded by known attachment URL from the extension search result
 - Custom Commands: https://extensions.streamer.bot/t/custom-commands/1036
 - Mega Shoutout Extension: https://extensions.streamer.bot/t/mega-shoutout-extension/103
+- User-provided `FCS Stub.sb` exported from Streamer.bot 1.0.4
 
 Downloaded files for local inspection:
 
@@ -22,6 +23,7 @@ build/research/extensions/active-chatter-list.sb
 build/research/extensions/shoutout-clip-playing.sb
 build/research/extensions/custom-commands-0.4.0.sb
 build/research/extensions/mega-shoutout.json
+tools/streamerbot_import/fixtures/streamerbot-1.0.4-first-chat-shoutouts-stub.json
 ```
 
 The Mega Shoutout attachment downloaded during this pass was an OBS JSON file, not a Streamer.bot import payload. The page also includes an inline legacy Streamer.bot import code, but that legacy payload does not include command or trigger records relevant to this builder change.
@@ -34,7 +36,7 @@ The Commands docs say chat commands are platform-agnostic and support Twitch, Yo
 
 The Twitch First Words docs say the trigger fires when someone sends their first message of the stream. They also note First Words reset timing defaults to 12 hours and recommend a `Settings -> Reset First Words` sub-action assigned to a Twitch `Stream Online` trigger when you want the reset to happen whenever the stream goes live.
 
-The Twitch Stream Online docs confirm the trigger exists and fires when the Twitch stream starts. I did not find a current Streamer.bot 1.0.4 extension export that exposed the numeric import-schema type for this trigger, so this change intentionally does not generate it.
+The Twitch Stream Online docs confirm the trigger exists and fires when the Twitch stream starts. The user-provided Streamer.bot 1.0.4 stub exposed the import shape used for the reset action.
 
 ## Observed Current Import Shapes
 
@@ -111,6 +113,35 @@ Shoutout Clip Playing was an older Streamer.bot 0.2.4 export. Its command trigge
 
 Active Chatter List was a legacy `NS4E` import. It did not include triggers; its page instructs users to tie the action to the First Words event manually.
 
+The user-provided FCS stub was the strongest source for the stream reset shape because it was exported from the target Streamer.bot version with the requested reset action in place. It showed:
+
+```json
+{
+  "enabled": true,
+  "exclusions": [],
+  "id": "e8226c92-03c4-4feb-9d3f-2cd5c57452bb",
+  "obsId": null,
+  "type": 14005
+}
+```
+
+The same reset action contained Streamer.bot's built-in reset sub-action:
+
+```json
+{
+  "enabled": true,
+  "id": "a6d45c1b-7a24-47cc-af41-e91929af0138",
+  "index": 0,
+  "parentId": null,
+  "type": 1026,
+  "weight": 0.0
+}
+```
+
+This stub also showed why the builder should preserve per-action templates rather than cloning the first C# action for every action: cloning a single template loses action-specific built-in sub-actions and trigger field shapes.
+
+All current Streamer.bot 1.0.4 exports inspected here used UUIDv4-shaped IDs. The builder now keeps deterministic output for release reproducibility while setting UUID version bits to 4, matching that observed export shape.
+
 ## Builder Decision
 
 Implemented:
@@ -118,9 +149,12 @@ Implemented:
 - Top-level `data.commands` generation from module manifests.
 - Command trigger generation on target actions using observed `type: 401`.
 - Twitch First Words trigger generation using observed AutoSO `type: 120`, `username`, and `isUserId` fields.
+- Twitch Stream Online trigger generation using the user-provided stub's observed `type: 14005`, `obsId`, and `exclusions` fields.
+- Preservation of per-action fixture shape, including the built-in `Reset First Words` sub-action with `type: 1026`.
+- Deterministic UUIDv4-shaped ID generation for Streamer.bot import records.
 
 Not implemented:
 
-- Twitch Stream Online trigger generation. The official docs confirm the trigger exists, but I did not find a trusted current export payload showing its numeric import type or parameters. The module still documents the Stream Online reset wiring as a manual post-import step.
+- Platform trigger generation beyond Twitch. The module manifest format keeps trigger generation extensible, but the MVP only emits Twitch command, First Words, and Stream Online reset wiring.
 
-This is deliberately conservative: command and First Words shapes are backed by inspected imports, while Stream Online remains manual until we have a known-good export or another current extension payload to clone.
+This is deliberately conservative: generated trigger and sub-action shapes are backed by inspected Streamer.bot 1.0.4 imports or the user-provided stub, while future platforms remain manual until their current export shapes are available.

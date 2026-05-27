@@ -19,9 +19,9 @@ The MVP ships with Twitch wiring only. The config keeps target IDs and target pl
 7. Run `FCS - Configure Defaults` if Streamer.bot does not auto-run it after import.
 8. Confirm the imported Twitch First Words trigger is attached to `FCS - Handle Twitch First Words`.
 9. Enable the imported `!so` / `!shoutout` command if you want the manual moderator command live.
-10. Follow `docs/trigger-setup.md` to wire Stream Online reset behavior.
+10. Confirm `FCS - Reset Stream State` has the Stream Online trigger and `Reset First Words` sub-action.
 
-Use a disposable Streamer.bot profile first. The generated `.sb` imports actions, the manual command, and the Twitch First Words trigger, but Stream Online reset wiring still needs to be inspected and configured before live use.
+Use a disposable Streamer.bot profile first. The generated `.sb` imports actions, the manual command, the Twitch First Words trigger, and the stream-start reset flow, but all imported wiring should still be inspected before live use.
 
 ## C# References
 
@@ -99,7 +99,7 @@ FCS - Reset Stream State
 
 `FCS - Run Shoutout` reads config, checks eligibility, fetches Twitch user info, attempts the native Twitch shoutout, sends the Twitch announcement, and records the login as handled for the current stream session.
 
-`FCS - Reset Stream State` creates a new `firstChatShoutouts.streamSessionId`. Run it when a stream starts so automatic first-chat shoutouts can happen once per stream.
+`FCS - Reset Stream State` resets Streamer.bot's First Words tracking and creates a new `firstChatShoutouts.streamSessionId`. Run it when a stream starts so automatic first-chat shoutouts can happen once per stream.
 
 ## Runtime State
 

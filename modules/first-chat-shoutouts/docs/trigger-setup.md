@@ -14,13 +14,13 @@ Automatic shoutouts only run for enabled logins listed in `firstChatShoutouts.co
 
 ## Stream Start Reset
 
-Attach a Twitch `Stream Online` trigger to:
+The generated import attaches a Twitch `Stream Online` trigger to:
 
 ```text
 FCS - Reset Stream State
 ```
 
-Also add Streamer.bot's built-in `Reset First Words` settings sub-action to the same stream-start flow. The module reset creates a new `firstChatShoutouts.streamSessionId`; `Reset First Words` clears Streamer.bot's own first-words tracking so the trigger can fire for a new stream. Stream Online trigger generation is not included in the current import because this repository does not yet have a trusted Streamer.bot 1.0.4 export shape for that trigger.
+It also includes Streamer.bot's built-in `Reset First Words` settings sub-action in the same stream-start flow. The module reset creates a new `firstChatShoutouts.streamSessionId`; `Reset First Words` clears Streamer.bot's own first-words tracking so the trigger can fire for a new stream.
 
 Suggested sub-action order:
 
@@ -29,4 +29,4 @@ Suggested sub-action order:
 2. Execute C# Code - FCS - Reset Stream State
 ```
 
-If you do not reset both Streamer.bot First Words and `firstChatShoutouts.streamSessionId`, automatic shoutouts may not fire exactly once per stream.
+If either imported item is missing, add it manually before going live. If you do not reset both Streamer.bot First Words and `firstChatShoutouts.streamSessionId`, automatic shoutouts may not fire exactly once per stream.
