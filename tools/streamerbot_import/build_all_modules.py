@@ -126,9 +126,10 @@ def build_all_modules(
         readme_path = module_output_dir / "README.md"
         artifact_manifest_path = module_output_dir / "manifest.json"
 
+        module_stub_path = resolve_module_stub_path(repo_root, manifest, stub_path)
         result = build_module_import.prepare_module_import(
             module_dir=module_dir,
-            input_path=stub_path,
+            input_path=module_stub_path,
             output_path=import_path,
         )
         assert_generated_import(import_path, manifest)
@@ -165,6 +166,20 @@ def build_all_modules(
         )
 
     return BuildAllResult(output_root=output_root, modules=summaries)
+
+
+def resolve_module_stub_path(repo_root, manifest, default_stub_path):
+    import_stub = manifest.get("importStub")
+    if not import_stub:
+        return Path(default_stub_path)
+
+    module_stub_path = Path(repo_root) / import_stub
+    if not module_stub_path.is_file():
+        raise ValueError(
+            f"Module '{manifest['id']}' references missing import stub: {import_stub}"
+        )
+
+    return module_stub_path
 
 
 def create_release_archive(dist_root, archive_path):
@@ -211,8 +226,11 @@ def ensure_safe_output_root(output_root, repo_root):
         repo_root / "tools",
     }
 
-    if output_root in forbidden_paths:
-        raise ValueError(f"Refusing to clean output path: {output_root}")
+    for forbidden_path in forbidden_paths:
+        if output_root == forbidden_path or output_root.is_relative_to(
+            forbidden_path
+        ):
+            raise ValueError(f"Refusing to clean output path: {output_root}")
 
 
 def assert_generated_import(import_path, manifest):

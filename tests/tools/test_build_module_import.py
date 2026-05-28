@@ -6,11 +6,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_ROOT = ROOT / "modules" / "activity-gated-chat-announcements"
+FIRST_CHAT_MODULE_ROOT = ROOT / "modules" / "first-chat-shoutouts"
 SCRIPT_PATH = ROOT / "tools" / "streamerbot_import" / "build_module_import.py"
 SCHEDULER_CODE_PATH = (
     MODULE_ROOT / "src" / "actions" / "run-announcement-scheduler.cs"
@@ -27,6 +29,7 @@ EXPECTED_ACTION_NAMES = {
 SYSTEM_CORE_REFERENCE = (
     "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
 )
+SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
 
 
 def load_script():
@@ -49,6 +52,14 @@ def action_by_name(payload, name):
     raise AssertionError(f"Missing action {name}")
 
 
+def command_by_name(payload, name):
+    for command in payload["data"]["commands"]:
+        if command["name"] == name:
+            return command
+
+    raise AssertionError(f"Missing command {name}")
+
+
 def action_code(action):
     sub_action = action["subActions"][0]
     if "byteCode" in sub_action:
@@ -59,6 +70,43 @@ def action_code(action):
 
 def action_references(action):
     return action["subActions"][0].get("references", [])
+
+
+def csharp_sub_action():
+    return {
+        "byteCode": base64.b64encode(
+            (
+                "public class CPHInline { public bool Execute() "
+                "{ return true; } }"
+            ).encode("utf-8")
+        ).decode("ascii"),
+        "enabled": True,
+        "id": "00000000-0000-4000-8000-000000000001",
+        "index": 0,
+        "parentId": None,
+        "references": [
+            "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+        ],
+        "type": 99999,
+    }
+
+
+def streamerbot_action(name, action_id, triggers=None, sub_actions=None):
+    return {
+        "alwaysRun": False,
+        "collapsedGroups": [],
+        "concurrent": False,
+        "enabled": True,
+        "excludeFromHistory": False,
+        "excludeFromPending": False,
+        "group": "FCS Stub",
+        "id": action_id,
+        "name": name,
+        "queue": "00000000-0000-0000-0000-000000000000",
+        "randomAction": False,
+        "subActions": list(sub_actions or [csharp_sub_action()]),
+        "triggers": list(triggers or []),
+    }
 
 
 class SchedulerImportPrepTest(unittest.TestCase):
@@ -148,6 +196,78 @@ class SchedulerImportPrepTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "C# code block"):
                 module.prepare_module_import(
                     module_dir=MODULE_ROOT,
+                    input_path=input_path,
+                    output_path=output_path,
+                )
+
+    def test_rejects_missing_framework_reference_for_using_directive(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            module_dir = Path(tmp_dir) / "regex-module"
+            action_dir = module_dir / "src" / "actions"
+            action_dir.mkdir(parents=True)
+            (action_dir / "uses-regex.cs").write_text(
+                (
+                    "using System;\n"
+                    "using System.Text.RegularExpressions;\n\n"
+                    "public class CPHInline { public bool Execute() { return true; } }\n"
+                ),
+                encoding="utf-8",
+            )
+            (module_dir / "module.json").write_text(
+                json.dumps(
+                    {
+                        "id": "regex-module",
+                        "name": "Regex Module",
+                        "version": "0.1.0",
+                        "description": "Fixture",
+                        "group": "Fixture",
+                        "actions": [
+                            {
+                                "name": "Fixture - Uses Regex",
+                                "source": "src/actions/uses-regex.cs",
+                            }
+                        ],
+                        "references": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "prepared.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "System.Text.RegularExpressions.*System.dll",
+            ):
+                module.prepare_module_import(
+                    module_dir=module_dir,
                     input_path=input_path,
                     output_path=output_path,
                 )
@@ -258,6 +378,361 @@ class SchedulerImportPrepTest(unittest.TestCase):
         )
         for action in prepared["data"]["actions"]:
             self.assertEqual(action["group"], "Activity-Gated Announcements")
+
+    def test_first_chat_shoutouts_import_contains_command_and_first_words_trigger(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "group": "Existing Group",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ],
+                "commands": [],
+                "queues": [],
+                "timers": [],
+                "websocketServers": [],
+                "websocketClients": [],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "first-chat-shoutouts.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            module.prepare_module_import(
+                module_dir=FIRST_CHAT_MODULE_ROOT,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        command = command_by_name(prepared, "First Chat Shoutout")
+        all_command = command_by_name(prepared, "First Chat Shoutout All")
+        auto_command = command_by_name(prepared, "First Chat Shoutout Auto Toggle")
+        manual_action = action_by_name(prepared, "FCS - Handle Manual Twitch Shoutout")
+        manual_all_action = action_by_name(
+            prepared,
+            "FCS - Handle Manual Twitch Shoutout All",
+        )
+        auto_toggle_action = action_by_name(
+            prepared,
+            "FCS - Handle Auto Shoutout Toggle",
+        )
+        first_words_action = action_by_name(
+            prepared, "FCS - Handle Twitch First Words"
+        )
+
+        self.assertEqual(len(prepared["data"]["commands"]), 3)
+        self.assertEqual(command["name"], "First Chat Shoutout")
+        self.assertEqual(command["command"], "!so\r\n!shoutout")
+        self.assertFalse(command["enabled"])
+        self.assertEqual(command["group"], "First Chat Shoutouts")
+        self.assertEqual(command["permittedGroups"], ["Moderators"])
+        self.assertEqual(command["sources"], 1)
+        self.assertEqual(all_command["name"], "First Chat Shoutout All")
+        self.assertEqual(all_command["command"], "!soall\r\n!shoutoutall")
+        self.assertFalse(all_command["enabled"])
+        self.assertEqual(all_command["permittedGroups"], ["Moderators"])
+        self.assertEqual(auto_command["name"], "First Chat Shoutout Auto Toggle")
+        self.assertEqual(auto_command["command"], "!soauto\r\n!shoutoutauto")
+        self.assertFalse(auto_command["enabled"])
+        self.assertEqual(auto_command["permittedGroups"], ["Moderators"])
+        self.assertIn(SYSTEM_REFERENCE, action_references(manual_action))
+        self.assertIn(SYSTEM_REFERENCE, action_references(auto_toggle_action))
+
+        self.assertEqual(
+            manual_action["triggers"],
+            [
+                {
+                    "commandId": command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Manual Twitch Shoutout:command:First Chat Shoutout",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(
+            manual_all_action["triggers"],
+            [
+                {
+                    "commandId": all_command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Manual Twitch Shoutout All:command:First Chat Shoutout All",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(
+            auto_toggle_action["triggers"],
+            [
+                {
+                    "commandId": auto_command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Auto Shoutout Toggle:command:First Chat Shoutout Auto Toggle",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(
+            first_words_action["triggers"],
+            [
+                {
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Twitch First Words:twitch-first-words",
+                    ),
+                    "isUserId": False,
+                    "type": 120,
+                    "username": "",
+                }
+            ],
+        )
+
+    def test_first_chat_shoutouts_import_uses_multi_action_stub_layout(self):
+        module = load_script()
+        command_id = "1427b8a0-89be-4fb1-abf1-feb3b6a75eb9"
+        reset_first_words_sub_action = {
+            "enabled": True,
+            "id": "a6d45c1b-7a24-47cc-af41-e91929af0138",
+            "index": 0,
+            "parentId": None,
+            "type": 1026,
+            "weight": 0.0,
+        }
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "FCS Stub"},
+            "data": {
+                "actions": [
+                    streamerbot_action(
+                        "FCS Stub - Configure Defaults",
+                        "35854a27-fdfe-4abd-8384-e3483cfa2f03",
+                    ),
+                    streamerbot_action(
+                        "FCS Stub - Handle Twitch First Words",
+                        "57b57340-3381-4741-add4-06e12122554d",
+                    ),
+                    streamerbot_action(
+                        "FCS Stub - Handle Manual Twitch Shoutout",
+                        "42f53126-1192-4de7-83ec-a13f07bcdebf",
+                        triggers=[
+                            {
+                                "enabled": True,
+                                "exclusions": [],
+                                "id": "60810a1f-d411-4b25-8aac-68208a9d2fe3",
+                                "isUserId": False,
+                                "type": 120,
+                                "username": None,
+                            }
+                        ],
+                    ),
+                    streamerbot_action(
+                        "FCS Stub - Run Shoutout",
+                        "ac723c2d-1b46-400f-9c41-75b4d6f46c80",
+                        triggers=[
+                            {
+                                "commandId": command_id,
+                                "enabled": True,
+                                "exclusions": [],
+                                "id": "c33b5357-a994-485f-babe-513194af1388",
+                                "type": 401,
+                            }
+                        ],
+                    ),
+                    streamerbot_action(
+                        "FCS Stub - Reset Stream State",
+                        "8751caf9-92f5-4e2d-aa8a-d9f2a0a7ecb3",
+                        triggers=[
+                            {
+                                "enabled": True,
+                                "exclusions": [],
+                                "id": "e8226c92-03c4-4feb-9d3f-2cd5c57452bb",
+                                "obsId": None,
+                                "type": 14005,
+                            }
+                        ],
+                        sub_actions=[
+                            reset_first_words_sub_action,
+                            {
+                                **csharp_sub_action(),
+                                "id": "cc88c73b-cdaf-415c-b640-88fa68d0fa39",
+                                "index": 1,
+                            },
+                        ],
+                    ),
+                ],
+                "commands": [
+                    {
+                        "caseSensitive": False,
+                        "command": "!so\r\n!shoutout",
+                        "enabled": False,
+                        "globalCooldown": 0,
+                        "grantType": 0,
+                        "group": "FCS Stub",
+                        "id": command_id,
+                        "ignoreBotAccount": True,
+                        "ignoreInternal": True,
+                        "include": False,
+                        "location": 0,
+                        "mode": 0,
+                        "name": "FCS Stub - First Chat Shoutout Stub",
+                        "permittedGroups": [],
+                        "permittedUsers": [],
+                        "persistCounter": False,
+                        "persistUserCounter": False,
+                        "regexExplicitCapture": False,
+                        "sources": 1,
+                        "userCooldown": 0,
+                    }
+                ],
+                "queues": [],
+                "timers": [],
+                "websocketServers": [],
+                "websocketClients": [],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "fcs-stub.sb"
+            output_path = Path(tmp_dir) / "first-chat-shoutouts.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            module.prepare_module_import(
+                module_dir=FIRST_CHAT_MODULE_ROOT,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        command = command_by_name(prepared, "First Chat Shoutout")
+        all_command = command_by_name(prepared, "First Chat Shoutout All")
+        auto_command = command_by_name(prepared, "First Chat Shoutout Auto Toggle")
+        first_words_action = action_by_name(
+            prepared, "FCS - Handle Twitch First Words"
+        )
+        manual_action = action_by_name(prepared, "FCS - Handle Manual Twitch Shoutout")
+        manual_all_action = action_by_name(
+            prepared,
+            "FCS - Handle Manual Twitch Shoutout All",
+        )
+        auto_toggle_action = action_by_name(
+            prepared,
+            "FCS - Handle Auto Shoutout Toggle",
+        )
+        run_action = action_by_name(prepared, "FCS - Run Shoutout")
+        reset_action = action_by_name(prepared, "FCS - Reset Stream State")
+
+        self.assertEqual(
+            [sub_action["type"] for sub_action in reset_action["subActions"]],
+            [1026, 99999],
+        )
+        self.assertEqual([sub_action["type"] for sub_action in run_action["subActions"]], [99999])
+        self.assertEqual(
+            [sub_action["type"] for sub_action in manual_all_action["subActions"]],
+            [99999],
+        )
+        self.assertEqual(
+            [sub_action["type"] for sub_action in auto_toggle_action["subActions"]],
+            [99999],
+        )
+        self.assertEqual(first_words_action["triggers"][0]["type"], 120)
+        self.assertEqual(first_words_action["triggers"][0]["username"], None)
+        self.assertEqual(manual_action["triggers"][0]["type"], 401)
+        self.assertEqual(manual_action["triggers"][0]["commandId"], command["id"])
+        self.assertEqual(manual_all_action["triggers"][0]["type"], 401)
+        self.assertEqual(manual_all_action["triggers"][0]["commandId"], all_command["id"])
+        self.assertEqual(auto_toggle_action["triggers"][0]["type"], 401)
+        self.assertEqual(auto_toggle_action["triggers"][0]["commandId"], auto_command["id"])
+        self.assertEqual(reset_action["triggers"][0]["type"], 14005)
+        self.assertEqual(reset_action["triggers"][0]["obsId"], None)
+
+    def test_generated_ids_are_uuid4_shaped_for_streamerbot_imports(self):
+        module = load_script()
+
+        generated_id = module.deterministic_id(
+            "first-chat-shoutouts",
+            "trigger:FCS - Handle Manual Twitch Shoutout:command:First Chat Shoutout",
+        )
+
+        self.assertEqual(uuid.UUID(generated_id).version, 4)
+
+    def test_first_chat_shoutouts_uses_module_import_stub_when_input_is_omitted(self):
+        module = load_script()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "first-chat-shoutouts.sb"
+
+            module.prepare_module_import(
+                module_dir=FIRST_CHAT_MODULE_ROOT,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        reset_action = action_by_name(prepared, "FCS - Reset Stream State")
+
+        self.assertEqual(
+            [sub_action["type"] for sub_action in reset_action["subActions"]],
+            [1026, 99999],
+        )
+        self.assertEqual(reset_action["triggers"][0]["type"], 14005)
+
+    def test_first_chat_shoutouts_configure_defaults_embeds_default_config_template(self):
+        module = load_script()
+        default_config = (
+            FIRST_CHAT_MODULE_ROOT / "src" / "config" / "default-config.json"
+        ).read_text(encoding="utf-8").strip()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "first-chat-shoutouts.sb"
+
+            module.prepare_module_import(
+                module_dir=FIRST_CHAT_MODULE_ROOT,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        configure_code = action_code(action_by_name(prepared, "FCS - Configure Defaults"))
+
+        self.assertNotIn(module.DEFAULT_CONFIG_PLACEHOLDER, configure_code)
+        self.assertIn(module.csharp_verbatim_string(default_config), configure_code)
 
     def test_cli_can_build_from_exports_dir(self):
         payload = {

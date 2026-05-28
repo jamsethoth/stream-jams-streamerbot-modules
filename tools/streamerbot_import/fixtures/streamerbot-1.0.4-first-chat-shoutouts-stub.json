@@ -1,0 +1,248 @@
+{
+  "data": {
+    "actions": [
+      {
+        "alwaysRun": false,
+        "collapsedGroups": [],
+        "concurrent": false,
+        "enabled": true,
+        "excludeFromHistory": false,
+        "excludeFromPending": false,
+        "group": "FCS Stub",
+        "id": "35854a27-fdfe-4abd-8384-e3483cfa2f03",
+        "name": "FCS Stub - Configure Defaults",
+        "queue": "00000000-0000-0000-0000-000000000000",
+        "randomAction": false,
+        "subActions": [
+          {
+            "byteCode": "dXNpbmcgU3lzdGVtOw0KDQpwdWJsaWMgY2xhc3MgQ1BISW5saW5lDQp7DQogICAgcHVibGljIGJvb2wgRXhlY3V0ZSgpDQogICAgew0KICAgICAgICByZXR1cm4gdHJ1ZTsNCiAgICB9DQp9",
+            "delayStart": false,
+            "description": null,
+            "enabled": true,
+            "id": "46335231-0466-44ca-a002-0d5389bff538",
+            "index": 0,
+            "name": null,
+            "parentId": null,
+            "precompile": false,
+            "references": [
+              "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+            ],
+            "saveResultToVariable": false,
+            "saveToVariable": null,
+            "type": 99999,
+            "weight": 0.0
+          }
+        ],
+        "triggers": []
+      },
+      {
+        "alwaysRun": false,
+        "collapsedGroups": [],
+        "concurrent": false,
+        "enabled": true,
+        "excludeFromHistory": false,
+        "excludeFromPending": false,
+        "group": "FCS Stub",
+        "id": "57b57340-3381-4741-add4-06e12122554d",
+        "name": "FCS Stub - Handle Twitch First Words",
+        "queue": "00000000-0000-0000-0000-000000000000",
+        "randomAction": false,
+        "subActions": [
+          {
+            "byteCode": "dXNpbmcgU3lzdGVtOw0KDQpwdWJsaWMgY2xhc3MgQ1BISW5saW5lDQp7DQogICAgcHVibGljIGJvb2wgRXhlY3V0ZSgpDQogICAgew0KICAgICAgICByZXR1cm4gdHJ1ZTsNCiAgICB9DQp9",
+            "delayStart": false,
+            "description": null,
+            "enabled": true,
+            "id": "a87f1cdf-63fe-4e2d-a7cb-c19b6b893992",
+            "index": 0,
+            "name": null,
+            "parentId": null,
+            "precompile": false,
+            "references": [
+              "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+            ],
+            "saveResultToVariable": false,
+            "saveToVariable": null,
+            "type": 99999,
+            "weight": 0.0
+          }
+        ],
+        "triggers": []
+      },
+      {
+        "alwaysRun": false,
+        "collapsedGroups": [],
+        "concurrent": false,
+        "enabled": true,
+        "excludeFromHistory": false,
+        "excludeFromPending": false,
+        "group": "FCS Stub",
+        "id": "42f53126-1192-4de7-83ec-a13f07bcdebf",
+        "name": "FCS Stub - Handle Manual Twitch Shoutout",
+        "queue": "00000000-0000-0000-0000-000000000000",
+        "randomAction": false,
+        "subActions": [
+          {
+            "byteCode": "dXNpbmcgU3lzdGVtOw0KDQpwdWJsaWMgY2xhc3MgQ1BISW5saW5lDQp7DQogICAgcHVibGljIGJvb2wgRXhlY3V0ZSgpDQogICAgew0KICAgICAgICByZXR1cm4gdHJ1ZTsNCiAgICB9DQp9",
+            "delayStart": false,
+            "description": null,
+            "enabled": true,
+            "id": "480970bb-2079-4700-9442-cf198e591b06",
+            "index": 0,
+            "name": null,
+            "parentId": null,
+            "precompile": false,
+            "references": [
+              "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+            ],
+            "saveResultToVariable": false,
+            "saveToVariable": null,
+            "type": 99999,
+            "weight": 0.0
+          }
+        ],
+        "triggers": [
+          {
+            "enabled": true,
+            "exclusions": [],
+            "id": "60810a1f-d411-4b25-8aac-68208a9d2fe3",
+            "isUserId": false,
+            "type": 120,
+            "username": null
+          }
+        ]
+      },
+      {
+        "alwaysRun": false,
+        "collapsedGroups": [],
+        "concurrent": false,
+        "enabled": true,
+        "excludeFromHistory": false,
+        "excludeFromPending": false,
+        "group": "FCS Stub",
+        "id": "ac723c2d-1b46-400f-9c41-75b4d6f46c80",
+        "name": "FCS Stub - Run Shoutout",
+        "queue": "00000000-0000-0000-0000-000000000000",
+        "randomAction": false,
+        "subActions": [
+          {
+            "byteCode": "dXNpbmcgU3lzdGVtOw0KDQpwdWJsaWMgY2xhc3MgQ1BISW5saW5lDQp7DQogICAgcHVibGljIGJvb2wgRXhlY3V0ZSgpDQogICAgew0KICAgICAgICByZXR1cm4gdHJ1ZTsNCiAgICB9DQp9",
+            "delayStart": false,
+            "description": null,
+            "enabled": true,
+            "id": "4c29f0e2-ee6e-459d-828d-6e169ea50ee7",
+            "index": 0,
+            "name": null,
+            "parentId": null,
+            "precompile": false,
+            "references": [
+              "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+            ],
+            "saveResultToVariable": false,
+            "saveToVariable": null,
+            "type": 99999,
+            "weight": 0.0
+          }
+        ],
+        "triggers": [
+          {
+            "commandId": "1427b8a0-89be-4fb1-abf1-feb3b6a75eb9",
+            "enabled": true,
+            "exclusions": [],
+            "id": "c33b5357-a994-485f-babe-513194af1388",
+            "type": 401
+          }
+        ]
+      },
+      {
+        "alwaysRun": false,
+        "collapsedGroups": [],
+        "concurrent": false,
+        "enabled": true,
+        "excludeFromHistory": false,
+        "excludeFromPending": false,
+        "group": "FCS Stub",
+        "id": "8751caf9-92f5-4e2d-aa8a-d9f2a0a7ecb3",
+        "name": "FCS Stub - Reset Stream State",
+        "queue": "00000000-0000-0000-0000-000000000000",
+        "randomAction": false,
+        "subActions": [
+          {
+            "enabled": true,
+            "id": "a6d45c1b-7a24-47cc-af41-e91929af0138",
+            "index": 0,
+            "parentId": null,
+            "type": 1026,
+            "weight": 0.0
+          },
+          {
+            "byteCode": "dXNpbmcgU3lzdGVtOw0KDQpwdWJsaWMgY2xhc3MgQ1BISW5saW5lDQp7DQogICAgcHVibGljIGJvb2wgRXhlY3V0ZSgpDQogICAgew0KICAgICAgICByZXR1cm4gdHJ1ZTsNCiAgICB9DQp9",
+            "delayStart": false,
+            "description": null,
+            "enabled": true,
+            "id": "cc88c73b-cdaf-415c-b640-88fa68d0fa39",
+            "index": 1,
+            "name": null,
+            "parentId": null,
+            "precompile": false,
+            "references": [
+              "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+            ],
+            "saveResultToVariable": false,
+            "saveToVariable": null,
+            "type": 99999,
+            "weight": 0.0
+          }
+        ],
+        "triggers": [
+          {
+            "enabled": true,
+            "exclusions": [],
+            "id": "e8226c92-03c4-4feb-9d3f-2cd5c57452bb",
+            "obsId": null,
+            "type": 14005
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "caseSensitive": false,
+        "command": "!so\r\n!shoutout",
+        "enabled": false,
+        "globalCooldown": 0,
+        "grantType": 0,
+        "group": "FCS Stub",
+        "id": "1427b8a0-89be-4fb1-abf1-feb3b6a75eb9",
+        "ignoreBotAccount": true,
+        "ignoreInternal": true,
+        "include": false,
+        "location": 0,
+        "mode": 0,
+        "name": "FCS Stub - First Chat Shoutout Stub",
+        "permittedGroups": [],
+        "permittedUsers": [],
+        "persistCounter": false,
+        "persistUserCounter": false,
+        "regexExplicitCapture": false,
+        "sources": 1,
+        "userCooldown": 0
+      }
+    ],
+    "queues": [],
+    "timers": [],
+    "websocketClients": [],
+    "websocketServers": []
+  },
+  "exportedFrom": "1.0.4",
+  "meta": {
+    "author": "jamsethoth",
+    "autoRunAction": null,
+    "description": "",
+    "minimumVersion": null,
+    "name": "My Export",
+    "version": "1.0.0"
+  },
+  "minimumVersion": "1.0.0-alpha.1",
+  "version": 23
+}

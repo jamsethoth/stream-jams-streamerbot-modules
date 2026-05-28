@@ -52,7 +52,7 @@ class BuildAllModulesTest(unittest.TestCase):
 
             self.assertEqual(
                 [module.module_id for module in result.modules],
-                ["activity-gated-chat-announcements"],
+                ["activity-gated-chat-announcements", "first-chat-shoutouts"],
             )
             self.assertTrue(sb_path.is_file())
             self.assertTrue(import_text_path.is_file())
@@ -63,6 +63,16 @@ class BuildAllModulesTest(unittest.TestCase):
 
             payload = sb_import_string.read_payload(sb_path)
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            first_chat_payload = sb_import_string.read_payload(
+                output_root
+                / "first-chat-shoutouts"
+                / "first-chat-shoutouts.sb"
+            )
+            first_chat_reset_action = next(
+                action
+                for action in first_chat_payload["data"]["actions"]
+                if action["name"] == "FCS - Reset Stream State"
+            )
 
             self.assertEqual(
                 payload["meta"]["name"],
@@ -73,6 +83,19 @@ class BuildAllModulesTest(unittest.TestCase):
             self.assertEqual(manifest["actionCount"], 7)
             self.assertEqual(manifest["importSha256"], file_digest(sb_path))
             self.assertIn("## Installation", readme_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                [sub_action["type"] for sub_action in first_chat_reset_action["subActions"]],
+                [1026, 99999],
+            )
+            self.assertEqual(first_chat_reset_action["triggers"][0]["type"], 14005)
+            first_chat_manifest = json.loads(
+                (
+                    output_root
+                    / "first-chat-shoutouts"
+                    / "manifest.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(first_chat_manifest["actionCount"], 7)
 
     def test_build_all_modules_is_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -112,6 +135,14 @@ class BuildAllModulesTest(unittest.TestCase):
                 "activity-gated-chat-announcements/README.md",
                 names,
             )
+            self.assertIn(
+                "first-chat-shoutouts/first-chat-shoutouts.sb",
+                names,
+            )
+            self.assertIn(
+                "first-chat-shoutouts/README.md",
+                names,
+            )
 
     def test_readme_validation_requires_installation_and_behavior_sections(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -131,6 +162,16 @@ class BuildAllModulesTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "Refusing to clean output path"):
                 build_all_modules.ensure_safe_output_root(repo_root, repo_root)
+
+    def test_output_safety_rejects_protected_source_descendants(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+
+            for protected_dir in ("modules", "tests", "tools", ".github", ".git"):
+                with self.subTest(protected_dir=protected_dir):
+                    output_root = repo_root / protected_dir / "generated"
+                    with self.assertRaisesRegex(ValueError, "Refusing to clean output path"):
+                        build_all_modules.ensure_safe_output_root(output_root, repo_root)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a Streamer.bot module import from a C# action template."""
+"""Build a Streamer.bot module import from a manifest and C# action fixture."""
 
 import argparse
 import base64
@@ -13,7 +13,6 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parents[1]
 DEFAULT_STUB_PATH = SCRIPT_DIR / "fixtures" / "streamerbot-1.0.4-csharp-stub.json"
 
 try:
@@ -32,10 +31,6 @@ REQUIRED_REFERENCES_BY_USING = {
     "System.Linq": SYSTEM_CORE_REFERENCE,
     "System.Text.RegularExpressions": SYSTEM_REFERENCE,
 }
-# C# action sources can use this as an explicit build-time splice point. During
-# import generation, render_action_source() replaces the quoted placeholder with
-# the JSON file referenced by the module manifest's defaultConfig field.
-DEFAULT_CONFIG_PLACEHOLDER = "__STREAMERBOT_MODULE_DEFAULT_CONFIG_JSON__"
 
 
 class PrepResult:
@@ -51,7 +46,7 @@ def prepare_module_import(
 ):
     module_dir = Path(module_dir)
     manifest = load_module_manifest(module_dir)
-    input_path = resolve_input_path(manifest, input_path)
+    input_path = resolve_input_path(module_dir, manifest, input_path)
     payload = read_payload(input_path)
     prepared = copy.deepcopy(payload)
     action_templates = select_action_templates(prepared, manifest)
@@ -66,7 +61,6 @@ def prepare_module_import(
             action_templates[index],
             manifest,
             action,
-            module_dir,
             module_dir / action["source"],
             references,
         )
@@ -85,26 +79,40 @@ def prepare_module_import(
     return PrepResult(replaced_code_blocks, output_path)
 
 
-def resolve_input_path(manifest, input_path):
+def resolve_input_path(module_dir, manifest, input_path):
     if input_path is not None:
         return Path(input_path)
 
     import_stub = manifest.get("importStub")
     if import_stub:
-        module_stub_path = REPO_ROOT / import_stub
-        if not module_stub_path.is_file():
-            raise ValueError(
-                f"Module '{manifest['id']}' references missing import stub: {import_stub}"
-            )
-        return module_stub_path
+        for candidate in candidate_stub_paths(module_dir, import_stub):
+            if candidate.is_file():
+                return candidate
+
+        raise ValueError(
+            f"Module '{manifest['id']}' references missing import stub: {import_stub}"
+        )
 
     return DEFAULT_STUB_PATH
 
 
-def prepare_scheduler_import(input_path, output_path, scheduler_code_path=None):
-    del scheduler_code_path
-    module_dir = REPO_ROOT / "modules" / "activity-gated-chat-announcements"
-    return prepare_module_import(module_dir, input_path=input_path, output_path=output_path)
+def candidate_stub_paths(module_dir, import_stub):
+    stub_path = Path(import_stub)
+    candidates = [
+        stub_path,
+        Path.cwd() / stub_path,
+        Path(module_dir) / stub_path,
+        Path(module_dir).parent / stub_path,
+        Path(module_dir).parents[1] / stub_path if len(Path(module_dir).parents) > 1 else stub_path,
+    ]
+
+    unique_candidates = []
+    for candidate in candidates:
+        resolved = candidate.resolve(strict=False)
+        if resolved not in unique_candidates:
+            unique_candidates.append(resolved)
+
+    return unique_candidates
 
 
 def load_module_manifest(module_dir):
@@ -240,14 +248,13 @@ def build_csharp_action(
     action_template,
     manifest,
     action_manifest,
-    module_dir,
     source_path,
     references,
 ):
     action = copy.deepcopy(action_template)
     action_name = action_manifest["name"]
     action_id = deterministic_id(manifest["id"], "action:" + action_name)
-    code = render_action_source(module_dir, manifest, source_path)
+    code = Path(source_path).read_text(encoding="utf-8")
 
     action["id"] = action_id
     action["name"] = action_name
@@ -263,34 +270,6 @@ def build_csharp_action(
     )
     action.setdefault("collapsedGroups", [])
     return action
-
-
-def render_action_source(module_dir, manifest, source_path):
-    code = Path(source_path).read_text(encoding="utf-8")
-    if DEFAULT_CONFIG_PLACEHOLDER not in code:
-        return code
-
-    # Keep default JSON editable as a normal module artifact while still making
-    # the generated Streamer.bot import self-contained.
-    default_config = manifest.get("defaultConfig")
-    if not default_config:
-        raise ValueError(
-            f"Action source '{source_path}' uses {DEFAULT_CONFIG_PLACEHOLDER} "
-            f"but module '{manifest['id']}' has no defaultConfig."
-        )
-
-    config_text = (Path(module_dir) / default_config).read_text(encoding="utf-8").strip()
-    json.loads(config_text)
-    placeholder_literal = f'"{DEFAULT_CONFIG_PLACEHOLDER}"'
-    replacement = csharp_verbatim_string(config_text)
-    if placeholder_literal in code:
-        return code.replace(placeholder_literal, replacement)
-
-    return code.replace(DEFAULT_CONFIG_PLACEHOLDER, replacement)
-
-
-def csharp_verbatim_string(value):
-    return '@"' + value.replace('"', '""') + '"'
 
 
 def build_command(manifest, command_manifest):
@@ -575,8 +554,8 @@ def write_bundle_data(payload, actions, commands=None):
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Prepare a Streamer.bot module import from the committed C# action "
-            "fixture, or from a custom exported C# action stub."
+            "Prepare a Streamer.bot module import from the bundled C# action "
+            "fixture, a manifest importStub, or a custom exported C# action stub."
         )
     )
     parser.add_argument("module", help="Module directory containing module.json")
@@ -585,7 +564,8 @@ def main():
         nargs="+",
         help=(
             "Either OUTPUT, or INPUT OUTPUT for compatibility with older commands. "
-            "When INPUT is omitted, the committed Streamer.bot C# stub fixture is used."
+            "When INPUT is omitted, the manifest importStub or bundled Streamer.bot "
+            "C# stub fixture is used."
         ),
     )
     parser.add_argument(

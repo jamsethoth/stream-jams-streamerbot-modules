@@ -1,0 +1,3 @@
+display_name: Streamer.bot Config
+short_description: Configure Streamer.bot automations.
+default_prompt: Help me configure Streamer.bot actions, commands, triggers, variables, scripts, local API integrations, or import strings.

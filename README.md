@@ -7,6 +7,7 @@ This repository is organized as a small monorepo. Each module owns its Streamer.
 ## Modules
 
 - `modules/activity-gated-chat-announcements`: recurring chat announcements that only post after enough real chat activity has occurred.
+- `modules/first-chat-shoutouts`: Twitch-first shoutouts for configured first-chat visitors and moderator command invocations.
 
 ## Layout
 
@@ -20,6 +21,8 @@ modules/
     tests/
 tools/
   streamerbot_import/
+skills/
+  streamerbot-config/
 tests/
   tools/
 ```
@@ -37,6 +40,14 @@ python3 -m tools.streamerbot_import.build_module_import \
 Generated `.sb` bundles are intentionally ignored by Git. Import generated bundles into a disposable Streamer.bot profile first, compile the imported C# actions, then move them into your live profile.
 
 For advanced compatibility testing against a different Streamer.bot export shape, pass a custom exported C# action stub with `--stub exports/csharp-stub.sb`.
+
+For implementation details intended for future agents and skill updates, see `docs/streamerbot-imports-agent-guide.md`.
+
+## Installable Codex Skill
+
+This repository includes the Streamer.bot Codex skill at `skills/streamerbot-config/`. The skill bundle includes `SKILL.md`, reference docs, UI metadata, `scripts/sb_import_string.py` for inspect/decode/encode, `scripts/streamerbot_sb_import_gen.py` for fixture-driven `.sb` generation from module manifests, and same-version Streamer.bot import fixtures for future reference.
+
+To install it into a local Codex skills directory, copy or sync `skills/streamerbot-config/` to `$CODEX_HOME/skills/streamerbot-config/`.
 
 ## Build All Module Artifacts
 
