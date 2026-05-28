@@ -32,6 +32,9 @@ REQUIRED_REFERENCES_BY_USING = {
     "System.Linq": SYSTEM_CORE_REFERENCE,
     "System.Text.RegularExpressions": SYSTEM_REFERENCE,
 }
+# C# action sources can use this as an explicit build-time splice point. During
+# import generation, render_action_source() replaces the quoted placeholder with
+# the JSON file referenced by the module manifest's defaultConfig field.
 DEFAULT_CONFIG_PLACEHOLDER = "__STREAMERBOT_MODULE_DEFAULT_CONFIG_JSON__"
 
 
@@ -267,6 +270,8 @@ def render_action_source(module_dir, manifest, source_path):
     if DEFAULT_CONFIG_PLACEHOLDER not in code:
         return code
 
+    # Keep default JSON editable as a normal module artifact while still making
+    # the generated Streamer.bot import self-contained.
     default_config = manifest.get("defaultConfig")
     if not default_config:
         raise ValueError(

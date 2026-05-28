@@ -16,6 +16,8 @@ python3 -m tools.streamerbot_import.build_module_import \
 
 The script maps the committed fixture's action shapes onto this module, replaces the C# source code, creates the command record, and writes an experimental `.sb` file.
 
+`FCS - Configure Defaults` keeps the default JSON in `src/config/default-config.json` as the source of truth. The checked-in C# action contains a build-time placeholder; `tools/streamerbot_import/build_module_import.py` reads `module.json`'s `defaultConfig` path and replaces that placeholder with the JSON content before embedding the action in the generated import.
+
 ## 2. Import And Inspect
 
 In a disposable Streamer.bot profile:
