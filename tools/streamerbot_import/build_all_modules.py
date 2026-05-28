@@ -226,8 +226,11 @@ def ensure_safe_output_root(output_root, repo_root):
         repo_root / "tools",
     }
 
-    if output_root in forbidden_paths:
-        raise ValueError(f"Refusing to clean output path: {output_root}")
+    for forbidden_path in forbidden_paths:
+        if output_root == forbidden_path or output_root.is_relative_to(
+            forbidden_path
+        ):
+            raise ValueError(f"Refusing to clean output path: {output_root}")
 
 
 def assert_generated_import(import_path, manifest):

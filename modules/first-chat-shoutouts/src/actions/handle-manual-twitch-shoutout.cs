@@ -47,7 +47,11 @@ public class CPHInline
             value = value.Substring(1);
         }
 
-        Match match = Regex.Match(value, @"[A-Za-z0-9_]{1,25}");
-        return match.Success ? match.Value.ToLowerInvariant() : "";
+        if (!Regex.IsMatch(value, @"^[A-Za-z0-9_]{1,25}$"))
+        {
+            return "";
+        }
+
+        return value.ToLowerInvariant();
     }
 }

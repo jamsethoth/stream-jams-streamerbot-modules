@@ -713,6 +713,27 @@ class SchedulerImportPrepTest(unittest.TestCase):
         )
         self.assertEqual(reset_action["triggers"][0]["type"], 14005)
 
+    def test_first_chat_shoutouts_configure_defaults_embeds_default_config_template(self):
+        module = load_script()
+        default_config = (
+            FIRST_CHAT_MODULE_ROOT / "src" / "config" / "default-config.json"
+        ).read_text(encoding="utf-8").strip()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "first-chat-shoutouts.sb"
+
+            module.prepare_module_import(
+                module_dir=FIRST_CHAT_MODULE_ROOT,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        configure_code = action_code(action_by_name(prepared, "FCS - Configure Defaults"))
+
+        self.assertNotIn(module.DEFAULT_CONFIG_PLACEHOLDER, configure_code)
+        self.assertIn(module.csharp_verbatim_string(default_config), configure_code)
+
     def test_cli_can_build_from_exports_dir(self):
         payload = {
             "version": 23,

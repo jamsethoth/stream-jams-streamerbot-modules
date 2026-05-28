@@ -32,6 +32,7 @@ REQUIRED_REFERENCES_BY_USING = {
     "System.Linq": SYSTEM_CORE_REFERENCE,
     "System.Text.RegularExpressions": SYSTEM_REFERENCE,
 }
+DEFAULT_CONFIG_PLACEHOLDER = "__STREAMERBOT_MODULE_DEFAULT_CONFIG_JSON__"
 
 
 class PrepResult:
@@ -62,6 +63,7 @@ def prepare_module_import(
             action_templates[index],
             manifest,
             action,
+            module_dir,
             module_dir / action["source"],
             references,
         )
@@ -235,13 +237,14 @@ def build_csharp_action(
     action_template,
     manifest,
     action_manifest,
+    module_dir,
     source_path,
     references,
 ):
     action = copy.deepcopy(action_template)
     action_name = action_manifest["name"]
     action_id = deterministic_id(manifest["id"], "action:" + action_name)
-    code = Path(source_path).read_text(encoding="utf-8")
+    code = render_action_source(module_dir, manifest, source_path)
 
     action["id"] = action_id
     action["name"] = action_name
@@ -257,6 +260,32 @@ def build_csharp_action(
     )
     action.setdefault("collapsedGroups", [])
     return action
+
+
+def render_action_source(module_dir, manifest, source_path):
+    code = Path(source_path).read_text(encoding="utf-8")
+    if DEFAULT_CONFIG_PLACEHOLDER not in code:
+        return code
+
+    default_config = manifest.get("defaultConfig")
+    if not default_config:
+        raise ValueError(
+            f"Action source '{source_path}' uses {DEFAULT_CONFIG_PLACEHOLDER} "
+            f"but module '{manifest['id']}' has no defaultConfig."
+        )
+
+    config_text = (Path(module_dir) / default_config).read_text(encoding="utf-8").strip()
+    json.loads(config_text)
+    placeholder_literal = f'"{DEFAULT_CONFIG_PLACEHOLDER}"'
+    replacement = csharp_verbatim_string(config_text)
+    if placeholder_literal in code:
+        return code.replace(placeholder_literal, replacement)
+
+    return code.replace(DEFAULT_CONFIG_PLACEHOLDER, replacement)
+
+
+def csharp_verbatim_string(value):
+    return '@"' + value.replace('"', '""') + '"'
 
 
 def build_command(manifest, command_manifest):

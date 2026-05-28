@@ -4,6 +4,7 @@ public class CPHInline
 {
     private const string ConfigGlobal = "firstChatShoutouts.config";
     private const string SessionGlobal = "firstChatShoutouts.streamSessionId";
+    private const string DefaultConfigJsonTemplate = "__STREAMERBOT_MODULE_DEFAULT_CONFIG_JSON__";
 
     public bool Execute()
     {
@@ -30,69 +31,6 @@ public class CPHInline
 
     private string DefaultConfigJson()
     {
-        return @"{
-  ""debugLogging"": false,
-  ""lastGameFallback"": ""something excellent"",
-  ""defaultAnnouncementTemplate"": ""Go follow @{login} at https://twitch.tv/{login}! They were last streaming {lastGame}."",
-  ""targets"": {
-    ""twitch_main"": {
-      ""platform"": ""twitch"",
-      ""enabled"": true,
-      ""nativeShoutoutEnabled"": true,
-      ""announcementEnabled"": true,
-      ""announcementColor"": ""purple"",
-      ""announcementUseBot"": true,
-      ""announcementFallbackToBroadcaster"": true
-    }
-  },
-  ""automatic"": {
-    ""enabled"": true,
-    ""targetIds"": [
-      ""twitch_main""
-    ]
-  },
-  ""manual"": {
-    ""enabled"": true,
-    ""targetIds"": [
-      ""twitch_main""
-    ],
-    ""allowAnyLogin"": true,
-    ""moderatorOnly"": true,
-    ""aliases"": [
-      ""!so"",
-      ""!shoutout""
-    ]
-  },
-  ""manualAll"": {
-    ""enabled"": true,
-    ""targetIds"": [
-      ""twitch_main""
-    ],
-    ""moderatorOnly"": true,
-    ""aliases"": [
-      ""!soall"",
-      ""!shoutoutall""
-    ]
-  },
-  ""autoToggle"": {
-    ""enabled"": true,
-    ""moderatorOnly"": true,
-    ""aliases"": [
-      ""!soauto"",
-      ""!shoutoutauto""
-    ]
-  },
-  ""people"": [
-    {
-      ""login"": ""examplecreator"",
-      ""enabled"": true,
-      ""announcementTemplate"": ""Please show @{login} some love at https://twitch.tv/{login}! They were last streaming {lastGame}.""
-    },
-    {
-      ""login"": ""anothercreator"",
-      ""enabled"": true
-    }
-  ]
-}";
+        return DefaultConfigJsonTemplate;
     }
 }

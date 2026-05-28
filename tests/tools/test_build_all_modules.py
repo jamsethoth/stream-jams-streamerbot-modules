@@ -163,6 +163,16 @@ class BuildAllModulesTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Refusing to clean output path"):
                 build_all_modules.ensure_safe_output_root(repo_root, repo_root)
 
+    def test_output_safety_rejects_protected_source_descendants(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+
+            for protected_dir in ("modules", "tests", "tools", ".github", ".git"):
+                with self.subTest(protected_dir=protected_dir):
+                    output_root = repo_root / protected_dir / "generated"
+                    with self.assertRaisesRegex(ValueError, "Refusing to clean output path"):
+                        build_all_modules.ensure_safe_output_root(output_root, repo_root)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -143,6 +143,20 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertNotIn("userId", run_action)
         self.assertNotRegex(run_action, r"args\s*\[")
 
+    def test_login_normalizers_require_complete_twitch_login_values(self):
+        action_paths = [
+            "src/actions/handle-twitch-first-words.cs",
+            "src/actions/handle-manual-twitch-shoutout.cs",
+            "src/actions/handle-manual-twitch-shoutout-all.cs",
+            "src/actions/run-shoutout.cs",
+        ]
+
+        for relative_path in action_paths:
+            with self.subTest(action=relative_path):
+                source = (MODULE_ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn('@"^[A-Za-z0-9_]{1,25}$"', source)
+                self.assertNotIn('@"[A-Za-z0-9_]{1,25}"', source)
+
     def test_trigger_and_command_wrapper_actions_set_core_arguments(self):
         first_words = (
             MODULE_ROOT / "src" / "actions" / "handle-twitch-first-words.cs"
