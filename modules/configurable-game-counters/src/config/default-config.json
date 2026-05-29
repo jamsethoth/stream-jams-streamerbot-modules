@@ -1,0 +1,65 @@
+{
+  "debugLogging": false,
+  "chatParser": {
+    "enabled": true,
+    "globalCooldownSeconds": 2,
+    "perUserCooldownSeconds": 8,
+    "sendResponses": true
+  },
+  "permissions": {
+    "increment": "everyone",
+    "report": "everyone",
+    "manage": "moderator"
+  },
+  "currentGame": {
+    "fallbackKey": "uncategorized",
+    "fallbackName": "Uncategorized",
+    "twitchSync": {
+      "enabled": true,
+      "mode": "autoWithManualLock",
+      "manualLockMinutes": 180,
+      "ignoredCategories": [],
+      "categoryMappings": {}
+    }
+  },
+  "counters": {
+    "greed": {
+      "enabled": true,
+      "label": "Greed",
+      "aliases": [
+        "!greed",
+        "!greedy"
+      ],
+      "amount": 1,
+      "permission": "everyone",
+      "responseTemplate": "{user} called greed. {gameName}: {gameCount}, all-time: {globalCount}.",
+      "reportTemplate": "{label} for {gameName}: {gameCount}. All-time: {globalCount}."
+    },
+    "death": {
+      "enabled": true,
+      "label": "Deaths",
+      "aliases": [
+        "!death",
+        "!deaths",
+        "!rip"
+      ],
+      "amount": 1,
+      "permission": "everyone",
+      "responseTemplate": "{user} marked a death. {gameName}: {gameCount}, all-time: {globalCount}.",
+      "reportTemplate": "{label} for {gameName}: {gameCount}. All-time: {globalCount}."
+    },
+    "level_up": {
+      "enabled": true,
+      "label": "Level Ups",
+      "aliases": [
+        "!levelup",
+        "!level",
+        "!ding"
+      ],
+      "amount": 1,
+      "permission": "everyone",
+      "responseTemplate": "{user} called a level up. {gameName}: {gameCount}, all-time: {globalCount}.",
+      "reportTemplate": "{label} for {gameName}: {gameCount}. All-time: {globalCount}."
+    }
+  }
+}
