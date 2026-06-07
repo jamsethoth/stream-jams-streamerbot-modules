@@ -95,7 +95,7 @@ class BuildAllModulesTest(unittest.TestCase):
                     / "manifest.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(first_chat_manifest["actionCount"], 7)
+            self.assertEqual(first_chat_manifest["actionCount"], 8)
 
     def test_build_all_modules_is_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -162,6 +162,15 @@ class BuildAllModulesTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "Refusing to clean output path"):
                 build_all_modules.ensure_safe_output_root(repo_root, repo_root)
+
+    def test_output_safety_allows_dist_module_artifact_directory(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_root = Path(tmp_dir)
+
+            build_all_modules.ensure_safe_output_root(
+                repo_root / "dist" / "modules",
+                repo_root,
+            )
 
     def test_output_safety_rejects_protected_source_descendants(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

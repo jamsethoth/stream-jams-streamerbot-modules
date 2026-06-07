@@ -217,6 +217,13 @@ def create_release_archive(dist_root, archive_path):
 def ensure_safe_output_root(output_root, repo_root):
     output_root = Path(output_root).resolve()
     repo_root = Path(repo_root).resolve()
+    allowed_generated_roots = {
+        repo_root / "dist",
+    }
+    for allowed_root in allowed_generated_roots:
+        if output_root == allowed_root or output_root.is_relative_to(allowed_root):
+            return
+
     forbidden_paths = {
         repo_root,
         repo_root / ".git",
