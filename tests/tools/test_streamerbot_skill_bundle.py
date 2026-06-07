@@ -83,8 +83,8 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
         inspected = json.loads(inspect_result.stdout)
 
         self.assertEqual(inspected["meta"]["name"], "First Chat Shoutouts")
-        self.assertEqual(inspected["counts"]["actions"], 7)
-        self.assertEqual(inspected["counts"]["commands"], 3)
+        self.assertEqual(inspected["counts"]["actions"], 8)
+        self.assertEqual(inspected["counts"]["commands"], 4)
 
     def test_bundled_reference_stub_decodes(self):
         env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}

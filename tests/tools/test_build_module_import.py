@@ -428,6 +428,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
         command = command_by_name(prepared, "First Chat Shoutout")
         all_command = command_by_name(prepared, "First Chat Shoutout All")
         auto_command = command_by_name(prepared, "First Chat Shoutout Auto Toggle")
+        auto_add_command = command_by_name(prepared, "First Chat Shoutout Auto Add")
         manual_action = action_by_name(prepared, "FCS - Handle Manual Twitch Shoutout")
         manual_all_action = action_by_name(
             prepared,
@@ -437,11 +438,15 @@ class SchedulerImportPrepTest(unittest.TestCase):
             prepared,
             "FCS - Handle Auto Shoutout Toggle",
         )
+        auto_add_action = action_by_name(
+            prepared,
+            "FCS - Handle Auto Shoutout Add",
+        )
         first_words_action = action_by_name(
             prepared, "FCS - Handle Twitch First Words"
         )
 
-        self.assertEqual(len(prepared["data"]["commands"]), 3)
+        self.assertEqual(len(prepared["data"]["commands"]), 4)
         self.assertEqual(command["name"], "First Chat Shoutout")
         self.assertEqual(command["command"], "!so\r\n!shoutout")
         self.assertFalse(command["enabled"])
@@ -456,8 +461,16 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(auto_command["command"], "!soauto\r\n!shoutoutauto")
         self.assertFalse(auto_command["enabled"])
         self.assertEqual(auto_command["permittedGroups"], ["Moderators"])
+        self.assertEqual(auto_add_command["name"], "First Chat Shoutout Auto Add")
+        self.assertEqual(
+            auto_add_command["command"],
+            "!soautoadd\r\n!addsoauto\r\n!shoutoutautoadd",
+        )
+        self.assertFalse(auto_add_command["enabled"])
+        self.assertEqual(auto_add_command["permittedGroups"], ["Moderators"])
         self.assertIn(SYSTEM_REFERENCE, action_references(manual_action))
         self.assertIn(SYSTEM_REFERENCE, action_references(auto_toggle_action))
+        self.assertIn(SYSTEM_REFERENCE, action_references(auto_add_action))
 
         self.assertEqual(
             manual_action["triggers"],
@@ -499,6 +512,21 @@ class SchedulerImportPrepTest(unittest.TestCase):
                     "id": module.deterministic_id(
                         "first-chat-shoutouts",
                         "trigger:FCS - Handle Auto Shoutout Toggle:command:First Chat Shoutout Auto Toggle",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(
+            auto_add_action["triggers"],
+            [
+                {
+                    "commandId": auto_add_command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "first-chat-shoutouts",
+                        "trigger:FCS - Handle Auto Shoutout Add:command:First Chat Shoutout Auto Add",
                     ),
                     "type": 401,
                 }

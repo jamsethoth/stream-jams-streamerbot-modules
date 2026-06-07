@@ -33,6 +33,10 @@
       "source": "src/actions/handle-auto-shoutout-toggle.cs"
     },
     {
+      "name": "FCS - Handle Auto Shoutout Add",
+      "source": "src/actions/handle-auto-shoutout-add.cs"
+    },
+    {
       "name": "FCS - Run Shoutout",
       "source": "src/actions/run-shoutout.cs"
     },
@@ -81,6 +85,21 @@
       "aliases": [
         "!soauto",
         "!shoutoutauto"
+      ],
+      "enabled": false,
+      "group": "First Chat Shoutouts",
+      "permittedGroups": [
+        "Moderators"
+      ],
+      "sources": 1
+    },
+    {
+      "name": "First Chat Shoutout Auto Add",
+      "action": "FCS - Handle Auto Shoutout Add",
+      "aliases": [
+        "!soautoadd",
+        "!addsoauto",
+        "!shoutoutautoadd"
       ],
       "enabled": false,
       "group": "First Chat Shoutouts",

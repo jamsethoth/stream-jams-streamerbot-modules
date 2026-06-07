@@ -19,6 +19,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "src/actions/handle-manual-twitch-shoutout.cs",
             "src/actions/handle-manual-twitch-shoutout-all.cs",
             "src/actions/handle-auto-shoutout-toggle.cs",
+            "src/actions/handle-auto-shoutout-add.cs",
             "src/actions/run-shoutout.cs",
             "src/actions/reset-stream-state.cs",
             "docs/import-prep.md",
@@ -41,6 +42,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertIn("manual", config)
         self.assertIn("manualAll", config)
         self.assertIn("autoToggle", config)
+        self.assertIn("autoAdd", config)
         self.assertIn("people", config)
         self.assertIn("defaultAnnouncementTemplate", config)
         self.assertIn("lastGameFallback", config)
@@ -63,6 +65,11 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertTrue(config["autoToggle"]["moderatorOnly"])
         self.assertIn("!soauto", config["autoToggle"]["aliases"])
         self.assertIn("!shoutoutauto", config["autoToggle"]["aliases"])
+        self.assertTrue(config["autoAdd"]["enabled"])
+        self.assertTrue(config["autoAdd"]["moderatorOnly"])
+        self.assertIn("!soautoadd", config["autoAdd"]["aliases"])
+        self.assertIn("!addsoauto", config["autoAdd"]["aliases"])
+        self.assertIn("!shoutoutautoadd", config["autoAdd"]["aliases"])
 
         twitch_target = config["targets"]["twitch_main"]
         self.assertEqual(twitch_target["platform"], "twitch")
@@ -96,6 +103,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
                 "FCS - Handle Manual Twitch Shoutout",
                 "FCS - Handle Manual Twitch Shoutout All",
                 "FCS - Handle Auto Shoutout Toggle",
+                "FCS - Handle Auto Shoutout Add",
                 "FCS - Run Shoutout",
                 "FCS - Reset Stream State",
             ],
@@ -148,6 +156,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "src/actions/handle-twitch-first-words.cs",
             "src/actions/handle-manual-twitch-shoutout.cs",
             "src/actions/handle-manual-twitch-shoutout-all.cs",
+            "src/actions/handle-auto-shoutout-add.cs",
             "src/actions/run-shoutout.cs",
         ]
 
@@ -169,6 +178,9 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         auto_toggle = (
             MODULE_ROOT / "src" / "actions" / "handle-auto-shoutout-toggle.cs"
+        ).read_text(encoding="utf-8")
+        auto_add = (
+            MODULE_ROOT / "src" / "actions" / "handle-auto-shoutout-add.cs"
         ).read_text(encoding="utf-8")
         reset = (MODULE_ROOT / "src" / "actions" / "reset-stream-state.cs").read_text(
             encoding="utf-8"
@@ -193,6 +205,17 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertIn("automatic", auto_toggle)
         self.assertIn("CPH.SendMessage", auto_toggle)
         self.assertIn("rawInput", auto_toggle)
+
+        self.assertIn("autoAdd", auto_add)
+        self.assertIn("firstChatShoutouts.config", auto_add)
+        self.assertIn("announcementTemplate", auto_add)
+        self.assertIn("EnsurePeopleArray", auto_add)
+        self.assertIn("UpsertPerson", auto_add)
+        self.assertIn("ParseCommandInput", auto_add)
+        self.assertIn("custom announcement template", auto_add)
+        self.assertIn("{lastGame}", auto_add)
+        self.assertIn("CPH.SendMessage", auto_add)
+        self.assertIn("rawInput", auto_add)
 
         self.assertIn("firstChatShoutouts.streamSessionId", reset)
         self.assertIn("DateTime.UtcNow.Ticks", reset)
@@ -230,9 +253,14 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertRegex(command_setup, re.compile(r"!shoutoutall", re.IGNORECASE))
         self.assertRegex(command_setup, re.compile(r"!soauto", re.IGNORECASE))
         self.assertRegex(command_setup, re.compile(r"!shoutoutauto", re.IGNORECASE))
+        self.assertRegex(command_setup, re.compile(r"!soautoadd", re.IGNORECASE))
+        self.assertRegex(command_setup, re.compile(r"!addsoauto", re.IGNORECASE))
+        self.assertRegex(command_setup, re.compile(r"!shoutoutautoadd", re.IGNORECASE))
         self.assertRegex(command_setup, re.compile(r"mod", re.IGNORECASE))
         self.assertIn("any Twitch login", command_setup)
         self.assertIn("automatic.enabled", readme)
+        self.assertIn("autoAdd.enabled", readme)
+        self.assertIn("{lastGame}", command_setup)
 
         expected_cases = [
             "configured automatic user",
@@ -240,6 +268,8 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "manual command",
             "manual all command",
             "auto toggle command",
+            "auto add command",
+            "auto add custom message",
             "last game fallback",
             "native shoutout cooldown",
             "per-person template",

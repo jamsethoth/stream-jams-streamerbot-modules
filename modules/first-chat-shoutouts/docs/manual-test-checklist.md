@@ -40,6 +40,14 @@ Use a disposable Streamer.bot profile and a low-risk Twitch channel before live 
 - Run `!soauto on` as a mod and confirm `automatic.enabled` becomes `true`.
 - Run the command as a non-mod if possible and confirm it is denied when `autoToggle.moderatorOnly` is `true`.
 
+## Auto Add Command Path
+
+- Create moderator-only `!soautoadd`, `!addsoauto`, and `!shoutoutautoadd` commands for `FCS - Handle Auto Shoutout Add`.
+- Run `!soautoadd somecreator` as a mod and confirm `people` includes `somecreator` with `enabled: true`.
+- Run `!soautoadd @somecreator Go follow @{login}; they last streamed {lastGame}!` as a mod and confirm the auto add custom message is saved as `announcementTemplate`.
+- Trigger Twitch First Words for that login and confirm the saved custom message is used for the automatic shoutout.
+- Run the command as a non-mod if possible and confirm it is denied when `autoAdd.moderatorOnly` is `true`.
+
 ## Templates And Fallbacks
 
 - Configure a per-person template and confirm the per-person template overrides the default.
