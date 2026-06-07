@@ -50,6 +50,15 @@
       "!shoutoutauto"
     ]
   },
+  "autoAdd": {
+    "enabled": true,
+    "moderatorOnly": true,
+    "aliases": [
+      "!soautoadd",
+      "!addsoauto",
+      "!shoutoutautoadd"
+    ]
+  },
   "people": [
     {
       "login": "examplecreator",
