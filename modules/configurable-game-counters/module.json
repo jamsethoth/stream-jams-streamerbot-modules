@@ -1,0 +1,44 @@
+{
+  "id": "configurable-game-counters",
+  "name": "Configurable Game Counters",
+  "version": "0.1.0",
+  "description": "Config-driven chat counters with global and per-current-game Streamer.bot state.",
+  "license": "AGPL-3.0-or-later",
+  "group": "Configurable Game Counters",
+  "actions": [
+    {
+      "name": "CGC - Configure Defaults",
+      "source": "src/actions/configure-defaults.cs",
+      "autoRun": true
+    },
+    {
+      "name": "CGC - Track Chat Counter Callout",
+      "source": "src/actions/track-chat-counter-callout.cs"
+    },
+    {
+      "name": "CGC - Set Current Game",
+      "source": "src/actions/set-current-game.cs"
+    },
+    {
+      "name": "CGC - Sync Current Game From Twitch",
+      "source": "src/actions/sync-current-game-from-twitch.cs"
+    },
+    {
+      "name": "CGC - Report Counter",
+      "source": "src/actions/report-counter.cs"
+    },
+    {
+      "name": "CGC - Adjust Counter",
+      "source": "src/actions/adjust-counter.cs"
+    },
+    {
+      "name": "CGC - Reset Counter",
+      "source": "src/actions/reset-counter.cs"
+    }
+  ],
+  "defaultConfig": "src/config/default-config.json",
+  "references": [
+    "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll",
+    "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
+  ]
+}

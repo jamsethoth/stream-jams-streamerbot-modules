@@ -52,7 +52,11 @@ class BuildAllModulesTest(unittest.TestCase):
 
             self.assertEqual(
                 [module.module_id for module in result.modules],
-                ["activity-gated-chat-announcements", "first-chat-shoutouts"],
+                [
+                    "activity-gated-chat-announcements",
+                    "configurable-game-counters",
+                    "first-chat-shoutouts",
+                ],
             )
             self.assertTrue(sb_path.is_file())
             self.assertTrue(import_text_path.is_file())
