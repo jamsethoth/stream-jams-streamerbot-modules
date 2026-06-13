@@ -1,0 +1,80 @@
+{
+  "id": "giveaway-module",
+  "name": "Giveaway Module",
+  "version": "0.1.0",
+  "description": "Single active Twitch giveaway with command and reward entry, persisted state, duplicate prevention, and moderator draw controls.",
+  "license": "AGPL-3.0-or-later",
+  "group": "Giveaway Module",
+  "actions": [
+    {
+      "name": "GWM - Configure Defaults",
+      "source": "src/actions/configure-defaults.cs",
+      "autoRun": true
+    },
+    {
+      "name": "GWM - Handle Command Entry",
+      "source": "src/actions/handle-command-entry.cs"
+    },
+    {
+      "name": "GWM - Handle Twitch Reward Entry",
+      "source": "src/actions/handle-twitch-reward-entry.cs"
+    },
+    {
+      "name": "GWM - Enter Giveaway",
+      "source": "src/actions/enter-giveaway.cs"
+    },
+    {
+      "name": "GWM - Clear Giveaway",
+      "source": "src/actions/clear-giveaway.cs"
+    },
+    {
+      "name": "GWM - Draw Giveaway",
+      "source": "src/actions/draw-giveaway.cs"
+    }
+  ],
+  "commands": [
+    {
+      "name": "Giveaway Enter",
+      "action": "GWM - Handle Command Entry",
+      "aliases": [
+        "!giveaway enter"
+      ],
+      "enabled": false,
+      "group": "Giveaway Module",
+      "permittedGroups": [],
+      "sources": 1,
+      "userCooldown": 5
+    },
+    {
+      "name": "Giveaway Clear",
+      "action": "GWM - Clear Giveaway",
+      "aliases": [
+        "!giveaway clear"
+      ],
+      "enabled": false,
+      "group": "Giveaway Module",
+      "permittedGroups": [
+        "Moderators"
+      ],
+      "sources": 1
+    },
+    {
+      "name": "Giveaway Draw",
+      "action": "GWM - Draw Giveaway",
+      "aliases": [
+        "!giveaway draw"
+      ],
+      "enabled": false,
+      "group": "Giveaway Module",
+      "permittedGroups": [
+        "Moderators"
+      ],
+      "sources": 1
+    }
+  ],
+  "defaultConfig": "src/config/default-config.json",
+  "references": [
+    "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll",
+    "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
+  ]
+}

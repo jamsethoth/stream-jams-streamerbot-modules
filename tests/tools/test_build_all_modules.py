@@ -56,6 +56,7 @@ class BuildAllModulesTest(unittest.TestCase):
                     "activity-gated-chat-announcements",
                     "configurable-game-counters",
                     "first-chat-shoutouts",
+                    "giveaway-module",
                 ],
             )
             self.assertTrue(sb_path.is_file())
@@ -145,6 +146,14 @@ class BuildAllModulesTest(unittest.TestCase):
             )
             self.assertIn(
                 "first-chat-shoutouts/README.md",
+                names,
+            )
+            self.assertIn(
+                "giveaway-module/giveaway-module.sb",
+                names,
+            )
+            self.assertIn(
+                "giveaway-module/README.md",
                 names,
             )
 

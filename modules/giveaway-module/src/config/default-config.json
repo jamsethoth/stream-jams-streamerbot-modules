@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "debugLogging": false,
+  "rewardEntry": {
+    "enabled": true,
+    "rewardIds": [],
+    "rewardNames": [
+      "Giveaway Entry"
+    ],
+    "matchAnyWhenUnconfigured": true
+  },
+  "permissions": {
+    "manage": "moderator"
+  },
+  "responses": {
+    "entered": "{displayName}, you are entered in the giveaway!",
+    "alreadyEntered": "{displayName}, you are already entered in the giveaway.",
+    "alreadyWon": "{displayName}, you already won this giveaway. You can enter again after the giveaway is cleared.",
+    "cleared": "The giveaway has been cleared.",
+    "winner": "The giveaway winner is {displayName}!",
+    "noEntries": "There are no giveaway entries to draw.",
+    "entryFailed": "{displayName}, I could not enter you because Twitch did not provide a user ID."
+  }
+}
