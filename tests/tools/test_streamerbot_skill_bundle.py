@@ -12,6 +12,7 @@ from tools.streamerbot_import.sb_import_string import read_payload
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_ROOT = ROOT / "skills" / "streamerbot-config"
 MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+CSHARP_SUB_ACTION_TYPE = 99999
 
 
 class StreamerbotSkillBundleTest(unittest.TestCase):
@@ -114,6 +115,7 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
         for action in payload["data"]["actions"]:
             references = action["subActions"][0].get("references", [])
             with self.subTest(action=action["name"]):
+                self.assertEqual(action["subActions"][0]["type"], CSHARP_SUB_ACTION_TYPE)
                 self.assertIn(MSCORLIB_REFERENCE, references)
 
     def test_bundled_reference_stub_decodes(self):

@@ -15,6 +15,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 DEFAULT_STUB_PATH = SCRIPT_DIR / "fixtures" / "streamerbot-1.0.4-csharp-stub.json"
+CSHARP_SUB_ACTION_TYPE = 99999
 
 try:
     from .sb_import_string import read_payload, write_payload
@@ -499,6 +500,7 @@ def build_sub_actions(action_template, manifest, action_name, code, references):
 
         if sub_action_has_csharp_code(sub_action):
             csharp_blocks += 1
+            sub_action["type"] = CSHARP_SUB_ACTION_TYPE
             for reference in references:
                 ensure_reference(sub_action, reference)
             set_csharp_code(sub_action, code)

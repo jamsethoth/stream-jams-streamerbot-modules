@@ -199,6 +199,7 @@ For each generated C# sub-action, the builder:
 - assigns a deterministic UUIDv4-shaped ID
 - keeps sub-action order
 - remaps `parentId` when the original parent sub-action was regenerated
+- normalizes the C# sub-action type to numeric `99999`
 - appends manifest references plus references inferred from C# `using` directives
 - replaces C# source with the corresponding file under `src/actions/`
 

@@ -162,7 +162,7 @@ Streamer.bot is action-first. An action owns:
 - `triggers`
 - group/name/enabled settings
 
-Observed C# sub-actions in Streamer.bot 1.0.4 use `type: 99999` and store source in a base64 `byteCode` field. Older or hand-made fixtures may expose a plain `code` field. Preserve the surrounding sub-action fields and replace only the code-bearing field.
+Observed C# sub-actions in Streamer.bot 1.0.4 use `type: 99999` and store source in a base64 `byteCode` field. Older or hand-made fixtures may expose a plain `code` field. Preserve the surrounding sub-action fields, normalize generated C# sub-actions to numeric `99999`, and replace only the code-bearing field.
 
 When replacing IDs, also remap any `parentId` values that point to regenerated sub-actions.
 

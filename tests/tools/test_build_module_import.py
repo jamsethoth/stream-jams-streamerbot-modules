@@ -32,6 +32,7 @@ SYSTEM_CORE_REFERENCE = (
 )
 SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
 MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+CSHARP_SUB_ACTION_TYPE = 99999
 
 
 def load_script():
@@ -180,6 +181,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
             ],
             scheduler_code,
         )
+        self.assertEqual(action["subActions"][0]["type"], CSHARP_SUB_ACTION_TYPE)
         self.assertNotIn(original_code, json.dumps(prepared))
 
     def test_rejects_exports_without_csharp_code_block(self):
@@ -715,6 +717,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(reward_entry_action["triggers"], [])
         for action in prepared["data"]["actions"]:
             with self.subTest(action=action["name"]):
+                self.assertEqual(action["subActions"][0]["type"], CSHARP_SUB_ACTION_TYPE)
                 self.assertIn(MSCORLIB_REFERENCE, action_references(action))
         self.assertIn("RewardMatches", action_code(reward_entry_action))
         self.assertIn("giveawayModule.state", action_code(configure_action))
