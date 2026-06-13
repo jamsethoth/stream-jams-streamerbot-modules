@@ -10,6 +10,8 @@ python3 -m tools.streamerbot_import.build_module_import \
 
 The generated import includes actions and command wiring. It does not generate the Twitch Reward Redemption event trigger because this repository does not yet have a same-version `.sb` fixture with that trigger record shape.
 
+The build scans the giveaway C# sources and adds required framework references to each generated C# sub-action, including `mscorlib.dll` for core predefined types and the manifest-provided framework references.
+
 After import into a disposable Streamer.bot profile:
 
 1. Compile all `GWM - ...` C# actions.

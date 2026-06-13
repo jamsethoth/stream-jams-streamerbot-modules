@@ -6,9 +6,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.streamerbot_import.sb_import_string import read_payload
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SKILL_ROOT = ROOT / "skills" / "streamerbot-config"
+MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
 
 
 class StreamerbotSkillBundleTest(unittest.TestCase):
@@ -85,6 +88,33 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
         self.assertEqual(inspected["meta"]["name"], "First Chat Shoutouts")
         self.assertEqual(inspected["counts"]["actions"], 8)
         self.assertEqual(inspected["counts"]["commands"], 4)
+
+    def test_bundled_generator_builds_giveaway_import_with_core_references(self):
+        env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / "giveaway-module.sb"
+            generate_result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SKILL_ROOT / "scripts" / "streamerbot_sb_import_gen.py"),
+                    "modules/giveaway-module",
+                    str(output_path),
+                ],
+                cwd=ROOT,
+                env=env,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(generate_result.returncode, 0, generate_result.stderr)
+            payload = read_payload(output_path)
+
+        for action in payload["data"]["actions"]:
+            references = action["subActions"][0].get("references", [])
+            with self.subTest(action=action["name"]):
+                self.assertIn(MSCORLIB_REFERENCE, references)
 
     def test_bundled_reference_stub_decodes(self):
         env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}

@@ -166,13 +166,20 @@ Observed C# sub-actions in Streamer.bot 1.0.4 use `type: 99999` and store source
 
 When replacing IDs, also remap any `parentId` values that point to regenerated sub-actions.
 
-C# references matter. If source uses a namespace such as `System.Text.RegularExpressions`, the generated sub-action may need an explicit framework DLL reference such as:
+C# references matter. The bundled generator scans C# `using` directives, keeps
+manifest-provided references, and adds known framework references automatically.
+For example, source that uses `System.Text.RegularExpressions` receives:
 
 ```text
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.dll
 ```
 
-If Streamer.bot reports missing namespaces during compile, inspect the generated action's `references` list and add a regression check to future generators.
+It also adds the baseline `mscorlib.dll` reference that defines core types such
+as `System.Object`, `System.String`, and `System.Boolean`. If a source imports an
+unknown namespace, update the generator's namespace mapping or host-provided
+namespace list before building. If Streamer.bot still reports missing namespaces
+during compile, inspect the generated action's `references` list and add a
+regression check to future generators.
 
 ## Commands And Command Triggers
 

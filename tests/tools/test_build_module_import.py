@@ -31,6 +31,7 @@ SYSTEM_CORE_REFERENCE = (
     "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
 )
 SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
+MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
 
 
 def load_script():
@@ -201,7 +202,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
                     output_path=output_path,
                 )
 
-    def test_rejects_missing_framework_reference_for_using_directive(self):
+    def test_adds_framework_references_for_using_directives(self):
         module = load_script()
         payload = {
             "version": 23,
@@ -263,9 +264,82 @@ class SchedulerImportPrepTest(unittest.TestCase):
             output_path = Path(tmp_dir) / "prepared.sb"
             input_path.write_bytes(encode_payload(payload))
 
+            module.prepare_module_import(
+                module_dir=module_dir,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        action = action_by_name(prepared, "Fixture - Uses Regex")
+        self.assertIn(MSCORLIB_REFERENCE, action_references(action))
+        self.assertIn(SYSTEM_REFERENCE, action_references(action))
+
+    def test_rejects_unmapped_using_directive(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            module_dir = Path(tmp_dir) / "unknown-module"
+            action_dir = module_dir / "src" / "actions"
+            action_dir.mkdir(parents=True)
+            (action_dir / "uses-unknown.cs").write_text(
+                (
+                    "using System;\n"
+                    "using Example.External.Package;\n\n"
+                    "public class CPHInline { public bool Execute() { return true; } }\n"
+                ),
+                encoding="utf-8",
+            )
+            (module_dir / "module.json").write_text(
+                json.dumps(
+                    {
+                        "id": "unknown-module",
+                        "name": "Unknown Module",
+                        "version": "0.1.0",
+                        "description": "Fixture",
+                        "group": "Fixture",
+                        "actions": [
+                            {
+                                "name": "Fixture - Uses Unknown",
+                                "source": "src/actions/uses-unknown.cs",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "prepared.sb"
+            input_path.write_bytes(encode_payload(payload))
+
             with self.assertRaisesRegex(
                 ValueError,
-                "System.Text.RegularExpressions.*System.dll",
+                "reference mappings.*Example.External.Package",
             ):
                 module.prepare_module_import(
                     module_dir=module_dir,
@@ -639,6 +713,9 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(draw_action["triggers"][0]["commandId"], draw_command["id"])
         self.assertEqual(draw_action["triggers"][0]["type"], 401)
         self.assertEqual(reward_entry_action["triggers"], [])
+        for action in prepared["data"]["actions"]:
+            with self.subTest(action=action["name"]):
+                self.assertIn(MSCORLIB_REFERENCE, action_references(action))
         self.assertIn("RewardMatches", action_code(reward_entry_action))
         self.assertIn("giveawayModule.state", action_code(configure_action))
         self.assertNotIn(module.DEFAULT_CONFIG_PLACEHOLDER, action_code(configure_action))

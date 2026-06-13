@@ -28,10 +28,15 @@ SYSTEM_CORE_REFERENCE = (
     "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
 )
 SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
+MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
 REQUIRED_REFERENCES_BY_USING = {
+    "System": MSCORLIB_REFERENCE,
     "System.Linq": SYSTEM_CORE_REFERENCE,
     "System.Text.RegularExpressions": SYSTEM_REFERENCE,
 }
+HOST_PROVIDED_USING_PREFIXES = (
+    "Newtonsoft.Json",
+)
 # C# action sources can use this as an explicit build-time splice point. During
 # import generation, render_action_source() replaces the quoted placeholder with
 # the JSON file referenced by the module manifest's defaultConfig field.
@@ -56,10 +61,7 @@ def prepare_module_import(
     prepared = copy.deepcopy(payload)
     action_templates = select_action_templates(prepared, manifest)
     trigger_templates = collect_trigger_templates(prepared)
-    references = list(manifest.get("references", []))
-    if SYSTEM_CORE_REFERENCE not in references:
-        references.append(SYSTEM_CORE_REFERENCE)
-    validate_csharp_references(module_dir, manifest, references)
+    references = resolve_csharp_references(module_dir, manifest)
 
     actions = [
         build_csharp_action(
@@ -162,9 +164,13 @@ def action_has_csharp_code(action):
     )
 
 
-def validate_csharp_references(module_dir, manifest, references):
-    normalized_references = {normalize_reference(reference) for reference in references}
-    missing = []
+def resolve_csharp_references(module_dir, manifest):
+    references = []
+    unknown = []
+
+    ensure_reference_value(references, MSCORLIB_REFERENCE)
+    for reference in manifest.get("references", []):
+        ensure_reference_value(references, reference)
 
     for action in manifest["actions"]:
         source_path = Path(module_dir) / action["source"]
@@ -172,30 +178,36 @@ def validate_csharp_references(module_dir, manifest, references):
 
         for namespace in extract_using_namespaces(code):
             required_reference = required_reference_for_namespace(namespace)
-            if not required_reference:
+            if required_reference:
+                ensure_reference_value(references, required_reference)
                 continue
 
-            if normalize_reference(required_reference) not in normalized_references:
-                missing.append(
-                    {
-                        "action": action["name"],
-                        "source": action["source"],
-                        "namespace": namespace,
-                        "reference": required_reference,
-                    }
-                )
+            if is_host_provided_namespace(namespace):
+                continue
 
-    if missing:
+            unknown.append(
+                {
+                    "action": action["name"],
+                    "source": action["source"],
+                    "namespace": namespace,
+                }
+            )
+
+    if unknown:
         details = "; ".join(
             (
-                f"{item['source']} ({item['action']}) uses {item['namespace']} "
-                f"and requires {item['reference']}"
+                f"{item['source']} ({item['action']}) imports {item['namespace']}"
             )
-            for item in missing
+            for item in unknown
         )
         raise ValueError(
-            f"Module '{manifest['id']}' is missing C# references: {details}"
+            f"Module '{manifest['id']}' imports namespaces without known C# "
+            f"reference mappings: {details}. Add the namespace to "
+            "REQUIRED_REFERENCES_BY_USING or HOST_PROVIDED_USING_PREFIXES before "
+            "building the Streamer.bot import."
         )
+
+    return references
 
 
 def extract_using_namespaces(code):
@@ -212,13 +224,30 @@ def extract_using_namespaces(code):
 
 
 def required_reference_for_namespace(namespace):
+    best_match = None
     for reference_namespace, reference in REQUIRED_REFERENCES_BY_USING.items():
         if namespace == reference_namespace or namespace.startswith(
             reference_namespace + "."
         ):
-            return reference
+            if best_match is None or len(reference_namespace) > len(best_match[0]):
+                best_match = (reference_namespace, reference)
 
-    return None
+    return None if best_match is None else best_match[1]
+
+
+def is_host_provided_namespace(namespace):
+    return any(
+        namespace == prefix or namespace.startswith(prefix + ".")
+        for prefix in HOST_PROVIDED_USING_PREFIXES
+    )
+
+
+def ensure_reference_value(references, reference):
+    if not any(
+        normalize_reference(existing) == normalize_reference(reference)
+        for existing in references
+    ):
+        references.append(reference)
 
 
 def normalize_reference(reference):

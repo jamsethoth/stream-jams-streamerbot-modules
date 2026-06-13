@@ -199,17 +199,26 @@ For each generated C# sub-action, the builder:
 - assigns a deterministic UUIDv4-shaped ID
 - keeps sub-action order
 - remaps `parentId` when the original parent sub-action was regenerated
-- appends required references
+- appends manifest references plus references inferred from C# `using` directives
 - replaces C# source with the corresponding file under `src/actions/`
 
-Reference validation is intentionally conservative. It currently maps:
+Reference validation is intentionally conservative. The builder scans every
+action source and maps known namespaces to framework DLL references before
+embedding C# in the import. It currently maps:
 
 ```text
+using System; -> mscorlib.dll
 using System.Linq; -> System.Core.dll
 using System.Text.RegularExpressions; -> System.dll
 ```
 
-If Streamer.bot compilation fails with a missing namespace, add a required-reference mapping in `build_module_import.py`, add the framework DLL to the module manifest if needed, and add an import-builder test. Streamer.bot compilation remains the final authority because the validator only knows mappings that have been explicitly encoded.
+`Newtonsoft.Json` namespaces are treated as Streamer.bot-host-provided and are
+not emitted as explicit DLL references. If a source imports an unknown namespace,
+the builder fails before writing the import. Add a required-reference mapping in
+`build_module_import.py` or mark the namespace as host-provided only after
+verifying it in Streamer.bot, then add an import-builder test. Streamer.bot
+compilation remains the final authority because the validator only knows
+mappings that have been explicitly encoded.
 
 ## Commands And Command Triggers
 
