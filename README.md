@@ -9,6 +9,7 @@ This repository is organized as a small monorepo. Each module owns its Streamer.
 - `modules/activity-gated-chat-announcements`: recurring chat announcements that only post after enough real chat activity has occurred.
 - `modules/configurable-game-counters`: config-driven chat counters with global and per-current-game Streamer.bot state.
 - `modules/first-chat-shoutouts`: Twitch-first shoutouts for configured first-chat visitors and moderator command invocations.
+- `modules/giveaway-module`: single active Twitch giveaway with command/reward entry and moderator draw controls.
 
 ## Layout
 

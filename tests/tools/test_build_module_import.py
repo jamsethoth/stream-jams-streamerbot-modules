@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_ROOT = ROOT / "modules" / "activity-gated-chat-announcements"
 FIRST_CHAT_MODULE_ROOT = ROOT / "modules" / "first-chat-shoutouts"
+GIVEAWAY_MODULE_ROOT = ROOT / "modules" / "giveaway-module"
 SCRIPT_PATH = ROOT / "tools" / "streamerbot_import" / "build_module_import.py"
 SCHEDULER_CODE_PATH = (
     MODULE_ROOT / "src" / "actions" / "run-announcement-scheduler.cs"
@@ -548,6 +549,99 @@ class SchedulerImportPrepTest(unittest.TestCase):
                 }
             ],
         )
+
+    def test_giveaway_module_import_contains_commands_and_reward_handler(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "group": "Existing Group",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ],
+                "commands": [],
+                "queues": [],
+                "timers": [],
+                "websocketServers": [],
+                "websocketClients": [],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "giveaway-module.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            module.prepare_module_import(
+                module_dir=GIVEAWAY_MODULE_ROOT,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        entry_command = command_by_name(prepared, "Giveaway Enter")
+        clear_command = command_by_name(prepared, "Giveaway Clear")
+        draw_command = command_by_name(prepared, "Giveaway Draw")
+        command_entry_action = action_by_name(prepared, "GWM - Handle Command Entry")
+        reward_entry_action = action_by_name(
+            prepared,
+            "GWM - Handle Twitch Reward Entry",
+        )
+        clear_action = action_by_name(prepared, "GWM - Clear Giveaway")
+        draw_action = action_by_name(prepared, "GWM - Draw Giveaway")
+        configure_action = action_by_name(prepared, "GWM - Configure Defaults")
+
+        self.assertEqual(prepared["meta"]["name"], "Giveaway Module")
+        self.assertEqual(len(prepared["data"]["actions"]), 6)
+        self.assertEqual(len(prepared["data"]["commands"]), 3)
+        self.assertEqual(entry_command["command"], "!giveaway enter")
+        self.assertEqual(clear_command["command"], "!giveaway clear")
+        self.assertEqual(draw_command["command"], "!giveaway draw")
+        self.assertFalse(entry_command["enabled"])
+        self.assertFalse(clear_command["enabled"])
+        self.assertFalse(draw_command["enabled"])
+        self.assertEqual(clear_command["permittedGroups"], ["Moderators"])
+        self.assertEqual(draw_command["permittedGroups"], ["Moderators"])
+        self.assertEqual(
+            command_entry_action["triggers"],
+            [
+                {
+                    "commandId": entry_command["id"],
+                    "enabled": True,
+                    "exclusions": [],
+                    "id": module.deterministic_id(
+                        "giveaway-module",
+                        "trigger:GWM - Handle Command Entry:command:Giveaway Enter",
+                    ),
+                    "type": 401,
+                }
+            ],
+        )
+        self.assertEqual(clear_action["triggers"][0]["commandId"], clear_command["id"])
+        self.assertEqual(clear_action["triggers"][0]["type"], 401)
+        self.assertEqual(draw_action["triggers"][0]["commandId"], draw_command["id"])
+        self.assertEqual(draw_action["triggers"][0]["type"], 401)
+        self.assertEqual(reward_entry_action["triggers"], [])
+        self.assertIn("RewardMatches", action_code(reward_entry_action))
+        self.assertIn("giveawayModule.state", action_code(configure_action))
+        self.assertNotIn(module.DEFAULT_CONFIG_PLACEHOLDER, action_code(configure_action))
 
     def test_first_chat_shoutouts_import_uses_multi_action_stub_layout(self):
         module = load_script()
