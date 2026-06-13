@@ -31,6 +31,8 @@ SYSTEM_CORE_REFERENCE = (
     "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll"
 )
 SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
+MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+CSHARP_SUB_ACTION_TYPE = 99999
 
 
 def load_script():
@@ -178,7 +180,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
             scheduler["subActions"][0]["code"],
             scheduler_code,
         )
-        self.assertEqual(scheduler["subActions"][0]["type"], 99999)
+        self.assertEqual(scheduler["subActions"][0]["type"], CSHARP_SUB_ACTION_TYPE)
         self.assertNotIn(original_code, json.dumps(prepared))
 
     def test_rejects_exports_without_csharp_code_block(self):
@@ -201,7 +203,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
                     output_path=output_path,
                 )
 
-    def test_rejects_missing_framework_reference_for_using_directive(self):
+    def test_adds_framework_references_for_using_directives(self):
         module = load_script()
         payload = {
             "version": 23,
@@ -263,9 +265,151 @@ class SchedulerImportPrepTest(unittest.TestCase):
             output_path = Path(tmp_dir) / "prepared.sb"
             input_path.write_bytes(encode_payload(payload))
 
+            module.prepare_module_import(
+                module_dir=module_dir,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        action = action_by_name(prepared, "Fixture - Uses Regex")
+        self.assertIn(MSCORLIB_REFERENCE, action_references(action))
+        self.assertIn(SYSTEM_REFERENCE, action_references(action))
+
+    def test_adds_baseline_csharp_reference_without_using_directives(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            module_dir = Path(tmp_dir) / "minimal-module"
+            action_dir = module_dir / "src" / "actions"
+            action_dir.mkdir(parents=True)
+            (action_dir / "minimal.cs").write_text(
+                "public class CPHInline { public bool Execute() { return true; } }\n",
+                encoding="utf-8",
+            )
+            (module_dir / "module.json").write_text(
+                json.dumps(
+                    {
+                        "id": "minimal-module",
+                        "name": "Minimal Module",
+                        "version": "0.1.0",
+                        "description": "Fixture",
+                        "group": "Fixture",
+                        "actions": [
+                            {
+                                "name": "Fixture - Minimal",
+                                "source": "src/actions/minimal.cs",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "prepared.sb"
+            input_path.write_bytes(encode_payload(payload))
+
+            module.prepare_module_import(
+                module_dir=module_dir,
+                input_path=input_path,
+                output_path=output_path,
+            )
+
+            prepared = module.read_payload(output_path)
+
+        references = action_references(action_by_name(prepared, "Fixture - Minimal"))
+
+        self.assertEqual(references, [MSCORLIB_REFERENCE])
+
+    def test_rejects_unmapped_using_directive(self):
+        module = load_script()
+        payload = {
+            "version": 23,
+            "minimumVersion": "1.0.0-alpha.1",
+            "exportedFrom": "1.0.4",
+            "meta": {"name": "C# Stub"},
+            "data": {
+                "actions": [
+                    {
+                        "name": "C# Stub",
+                        "subActions": [
+                            {
+                                "type": 99999,
+                                "byteCode": base64.b64encode(
+                                    (
+                                        "public class CPHInline { public bool Execute() "
+                                        "{ return true; } }"
+                                    ).encode("utf-8")
+                                ).decode("ascii"),
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            module_dir = Path(tmp_dir) / "unknown-module"
+            action_dir = module_dir / "src" / "actions"
+            action_dir.mkdir(parents=True)
+            (action_dir / "uses-unknown.cs").write_text(
+                (
+                    "using System;\n"
+                    "using System.Data;\n\n"
+                    "public class CPHInline { public bool Execute() { return true; } }\n"
+                ),
+                encoding="utf-8",
+            )
+            (module_dir / "module.json").write_text(
+                json.dumps(
+                    {
+                        "id": "unknown-module",
+                        "name": "Unknown Module",
+                        "version": "0.1.0",
+                        "description": "Fixture",
+                        "group": "Fixture",
+                        "actions": [
+                            {
+                                "name": "Fixture - Uses Unknown",
+                                "source": "src/actions/uses-unknown.cs",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            input_path = Path(tmp_dir) / "stub.sb"
+            output_path = Path(tmp_dir) / "prepared.sb"
+            input_path.write_bytes(encode_payload(payload))
+
             with self.assertRaisesRegex(
                 ValueError,
-                "System.Text.RegularExpressions.*System.dll",
+                "reference mappings.*System.Data",
             ):
                 module.prepare_module_import(
                     module_dir=module_dir,
@@ -642,7 +786,8 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(reward_entry_action["triggers"], [])
         for action in prepared["data"]["actions"]:
             with self.subTest(action=action["name"]):
-                self.assertEqual(action["subActions"][0]["type"], 99999)
+                self.assertEqual(action["subActions"][0]["type"], CSHARP_SUB_ACTION_TYPE)
+                self.assertIn(MSCORLIB_REFERENCE, action_references(action))
         self.assertIn("RewardMatches", action_code(reward_entry_action))
         self.assertIn("giveawayModule.state", action_code(configure_action))
         self.assertNotIn(module.DEFAULT_CONFIG_PLACEHOLDER, action_code(configure_action))
