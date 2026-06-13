@@ -203,12 +203,19 @@ For each generated C# sub-action, the builder:
 - appends manifest references plus references inferred from C# `using` directives
 - replaces C# source with the corresponding file under `src/actions/`
 
-Reference validation is intentionally conservative. The builder scans every
-action source and maps known namespaces to framework DLL references before
-embedding C# in the import. It currently maps:
+Reference validation is intentionally conservative. The builder always adds
+baseline C# references, then scans every action source and maps known namespaces
+to additional framework DLL references before embedding C# in the import.
+
+Baseline C# references:
 
 ```text
-using System; -> mscorlib.dll
+mscorlib.dll
+```
+
+Additional namespace mappings currently include:
+
+```text
 using System.Linq; -> System.Core.dll
 using System.Text.RegularExpressions; -> System.dll
 ```

@@ -29,8 +29,17 @@ SYSTEM_CORE_REFERENCE = (
 )
 SYSTEM_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll"
 MSCORLIB_REFERENCE = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll"
+BASE_CSHARP_REFERENCES = (
+    MSCORLIB_REFERENCE,
+)
+BASE_REFERENCE_USING_NAMESPACES = (
+    "System",
+)
+BASE_REFERENCE_USING_PREFIXES = (
+    "System.Collections",
+    "System.Globalization",
+)
 REQUIRED_REFERENCES_BY_USING = {
-    "System": MSCORLIB_REFERENCE,
     "System.Linq": SYSTEM_CORE_REFERENCE,
     "System.Text.RegularExpressions": SYSTEM_REFERENCE,
 }
@@ -177,7 +186,8 @@ def resolve_csharp_references(module_dir, manifest):
     references = []
     unknown = []
 
-    ensure_reference_value(references, MSCORLIB_REFERENCE)
+    for reference in BASE_CSHARP_REFERENCES:
+        ensure_reference_value(references, reference)
     for reference in manifest.get("references", []):
         ensure_reference_value(references, reference)
 
@@ -189,6 +199,9 @@ def resolve_csharp_references(module_dir, manifest):
             required_reference = required_reference_for_namespace(namespace)
             if required_reference:
                 ensure_reference_value(references, required_reference)
+                continue
+
+            if is_baseline_reference_namespace(namespace):
                 continue
 
             if is_host_provided_namespace(namespace):
@@ -242,6 +255,16 @@ def required_reference_for_namespace(namespace):
                 best_match = (reference_namespace, reference)
 
     return None if best_match is None else best_match[1]
+
+
+def is_baseline_reference_namespace(namespace):
+    if namespace in BASE_REFERENCE_USING_NAMESPACES:
+        return True
+
+    return any(
+        namespace == prefix or namespace.startswith(prefix + ".")
+        for prefix in BASE_REFERENCE_USING_PREFIXES
+    )
 
 
 def is_host_provided_namespace(namespace):
