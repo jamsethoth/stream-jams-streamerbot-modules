@@ -36,6 +36,7 @@ REQUIRED_REFERENCES_BY_USING = {
 # import generation, render_action_source() replaces the quoted placeholder with
 # the JSON file referenced by the module manifest's defaultConfig field.
 DEFAULT_CONFIG_PLACEHOLDER = "__STREAMERBOT_MODULE_DEFAULT_CONFIG_JSON__"
+CSHARP_SUB_ACTION_TYPE = 99999
 
 
 class PrepResult:
@@ -457,6 +458,10 @@ def build_sub_actions(action_template, manifest, action_name, code, references):
 
     for index, sub_action_template in enumerate(action_template.get("subActions", [])):
         sub_action = copy.deepcopy(sub_action_template)
+        is_csharp_sub_action = sub_action_has_csharp_code(sub_action)
+        if is_csharp_sub_action:
+            sub_action["type"] = CSHARP_SUB_ACTION_TYPE
+
         old_id = sub_action.get("id")
         sub_action["id"] = deterministic_id(
             manifest["id"],
@@ -468,7 +473,7 @@ def build_sub_actions(action_template, manifest, action_name, code, references):
         if old_id:
             id_map[old_id] = sub_action["id"]
 
-        if sub_action_has_csharp_code(sub_action):
+        if is_csharp_sub_action:
             csharp_blocks += 1
             for reference in references:
                 ensure_reference(sub_action, reference)

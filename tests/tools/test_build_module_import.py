@@ -161,6 +161,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
         action = prepared["data"]["actions"][0]
 
         action_names = {action["name"] for action in prepared["data"]["actions"]}
+        scheduler = action_by_name(prepared, "AGA - Run Announcement Scheduler")
 
         self.assertEqual(result.replaced_code_blocks, len(EXPECTED_ACTION_NAMES))
         self.assertEqual(
@@ -174,11 +175,10 @@ class SchedulerImportPrepTest(unittest.TestCase):
             action_by_name(prepared, "AGA - Configure Defaults")["id"],
         )
         self.assertEqual(
-            action_by_name(prepared, "AGA - Run Announcement Scheduler")["subActions"][0][
-                "code"
-            ],
+            scheduler["subActions"][0]["code"],
             scheduler_code,
         )
+        self.assertEqual(scheduler["subActions"][0]["type"], 99999)
         self.assertNotIn(original_code, json.dumps(prepared))
 
     def test_rejects_exports_without_csharp_code_block(self):
@@ -314,6 +314,7 @@ class SchedulerImportPrepTest(unittest.TestCase):
         scheduler = action_by_name(prepared, "AGA - Run Announcement Scheduler")
 
         self.assertEqual(result.replaced_code_blocks, len(EXPECTED_ACTION_NAMES))
+        self.assertEqual(scheduler["subActions"][0]["type"], 99999)
         self.assertEqual(action_code(scheduler), SCHEDULER_CODE_PATH.read_text(encoding="utf-8"))
 
     def test_full_bundle_contains_config_globals_and_sender_actions(self):
@@ -639,6 +640,9 @@ class SchedulerImportPrepTest(unittest.TestCase):
         self.assertEqual(draw_action["triggers"][0]["commandId"], draw_command["id"])
         self.assertEqual(draw_action["triggers"][0]["type"], 401)
         self.assertEqual(reward_entry_action["triggers"], [])
+        for action in prepared["data"]["actions"]:
+            with self.subTest(action=action["name"]):
+                self.assertEqual(action["subActions"][0]["type"], 99999)
         self.assertIn("RewardMatches", action_code(reward_entry_action))
         self.assertIn("giveawayModule.state", action_code(configure_action))
         self.assertNotIn(module.DEFAULT_CONFIG_PLACEHOLDER, action_code(configure_action))
@@ -933,6 +937,12 @@ class SchedulerImportPrepTest(unittest.TestCase):
             prepared = load_script().read_payload(output_path)
             action_names = {action["name"] for action in prepared["data"]["actions"]}
             self.assertEqual(action_names, EXPECTED_ACTION_NAMES)
+            self.assertTrue(
+                all(
+                    action["subActions"][0]["type"] == 99999
+                    for action in prepared["data"]["actions"]
+                )
+            )
             self.assertEqual(
                 prepared["meta"]["description"],
                 (
