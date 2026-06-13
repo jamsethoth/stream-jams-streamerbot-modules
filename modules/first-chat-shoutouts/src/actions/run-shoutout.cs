@@ -6,7 +6,7 @@ public class CPHInline
 {
     private const string ConfigGlobal = "firstChatShoutouts.config";
     private const string SessionGlobal = "firstChatShoutouts.streamSessionId";
-    private const string SentPrefix = "firstChatShoutouts.sent.";
+    private const string StateGlobal = "firstChatShoutouts.streamState";
 
     public bool Execute()
     {
@@ -31,6 +31,12 @@ public class CPHInline
         }
 
         if (!TryLoadConfig(out JObject config))
+        {
+            return true;
+        }
+
+        JObject state;
+        if (!TryLoadState(out state))
         {
             return true;
         }
@@ -74,7 +80,7 @@ public class CPHInline
                 return true;
             }
 
-            if (AlreadyHandled(targetId, shoutoutLogin))
+            if (AlreadyHandled(state, targetId, shoutoutLogin))
             {
                 if (IsDebugEnabled(config))
                 {
@@ -151,7 +157,7 @@ public class CPHInline
 
         if (announcementAttempted)
         {
-            MarkHandled(targetId, shoutoutLogin);
+            MarkHandled(state, config, targetId, shoutoutLogin, shoutoutSource);
         }
 
         if (IsDebugEnabled(config))
@@ -181,6 +187,37 @@ public class CPHInline
         catch (Exception ex)
         {
             CPH.LogError($"[FCS] Invalid JSON in '{ConfigGlobal}': {ex.Message}");
+            return false;
+        }
+    }
+
+    private bool TryLoadState(out JObject state)
+    {
+        state = null;
+        string stateJson = CPH.GetGlobalVar<string>(StateGlobal, true);
+        if (string.IsNullOrWhiteSpace(stateJson))
+        {
+            state = CreateBlankState(CurrentSessionId(), DateTime.UtcNow);
+            SaveState(state, null);
+            return true;
+        }
+
+        try
+        {
+            state = JObject.Parse(stateJson);
+            if (!IsSchemaVersionOne(state))
+            {
+                CPH.LogError($"[FCS] Unsupported schemaVersion in '{StateGlobal}'. State was left unchanged.");
+                state = null;
+                return false;
+            }
+
+            EnsureBaseState(state, DateTime.UtcNow);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            CPH.LogError($"[FCS] Invalid JSON in '{StateGlobal}': {ex.Message}");
             return false;
         }
     }
@@ -343,20 +380,28 @@ public class CPHInline
         return resolved.Trim();
     }
 
-    private bool AlreadyHandled(string targetId, string login)
+    private bool AlreadyHandled(JObject state, string targetId, string login)
     {
-        string sentGlobal = SentGlobal(targetId, login);
-        return CPH.GetGlobalVar<bool?>(sentGlobal, true) ?? false;
+        JObject loginState = GetLoginState(state, targetId, login);
+        return loginState != null && IsEnabled(loginState["sent"], false);
     }
 
-    private void MarkHandled(string targetId, string login)
+    private void MarkHandled(JObject state, JObject config, string targetId, string login, string source)
     {
-        CPH.SetGlobalVar(SentGlobal(targetId, login), true, true);
+        JObject targetState = EnsureTargetState(state, targetId);
+        JObject loginState = EnsureLoginState(targetState, login);
+        loginState["sent"] = true;
+        loginState["sentTimeUtc"] = DateTime.UtcNow.ToString("o");
+        loginState["sentSource"] = NormalizeKey(source);
+        SaveState(state, config);
     }
 
-    private string SentGlobal(string targetId, string login)
+    private JObject GetLoginState(JObject state, string targetId, string login)
     {
-        return SentPrefix + NormalizeKey(targetId) + "." + CurrentSessionId() + "." + NormalizeLogin(login);
+        JObject targets = state["targets"] as JObject;
+        JObject targetState = targets == null ? null : targets[NormalizeKey(targetId)] as JObject;
+        JObject logins = targetState == null ? null : targetState["logins"] as JObject;
+        return logins == null ? null : logins[NormalizeLogin(login)] as JObject;
     }
 
     private string CurrentSessionId()
@@ -369,6 +414,217 @@ public class CPHInline
         }
 
         return Regex.Replace(sessionId, @"[^A-Za-z0-9_]", "");
+    }
+
+    private JObject CreateBlankState(string sessionId, DateTime now)
+    {
+        string timestamp = now.ToString("o");
+        return new JObject
+        {
+            ["schemaVersion"] = 1,
+            ["activeSessionId"] = sessionId,
+            ["activeStartedAtUtc"] = timestamp,
+            ["lastUpdatedAtUtc"] = timestamp,
+            ["lastRecoveredAtUtc"] = JValue.CreateNull(),
+            ["targets"] = new JObject(),
+            ["archivedSessions"] = new JArray()
+        };
+    }
+
+    private void EnsureBaseState(JObject state, DateTime now)
+    {
+        if (string.IsNullOrWhiteSpace(GetString(state, "activeSessionId")))
+        {
+            state["activeSessionId"] = CurrentSessionId();
+        }
+
+        if (string.IsNullOrWhiteSpace(GetString(state, "activeStartedAtUtc")))
+        {
+            state["activeStartedAtUtc"] = now.ToString("o");
+        }
+
+        if (string.IsNullOrWhiteSpace(GetString(state, "lastUpdatedAtUtc")))
+        {
+            state["lastUpdatedAtUtc"] = now.ToString("o");
+        }
+
+        if (!(state["targets"] is JObject))
+        {
+            state["targets"] = new JObject();
+        }
+
+        if (!(state["archivedSessions"] is JArray))
+        {
+            state["archivedSessions"] = new JArray();
+        }
+    }
+
+    private JObject EnsureTargetState(JObject state, string targetId)
+    {
+        JObject targets = state["targets"] as JObject;
+        if (targets == null)
+        {
+            targets = new JObject();
+            state["targets"] = targets;
+        }
+
+        string normalizedTargetId = NormalizeKey(targetId);
+        JObject targetState = targets[normalizedTargetId] as JObject;
+        if (targetState == null)
+        {
+            targetState = new JObject();
+            targets[normalizedTargetId] = targetState;
+        }
+
+        if (!(targetState["enteredOrder"] is JArray))
+        {
+            targetState["enteredOrder"] = new JArray();
+        }
+
+        if (!(targetState["logins"] is JObject))
+        {
+            targetState["logins"] = new JObject();
+        }
+
+        return targetState;
+    }
+
+    private JObject EnsureLoginState(JObject targetState, string login)
+    {
+        JObject logins = targetState["logins"] as JObject;
+        if (logins == null)
+        {
+            logins = new JObject();
+            targetState["logins"] = logins;
+        }
+
+        string normalizedLogin = NormalizeLogin(login);
+        JObject loginState = logins[normalizedLogin] as JObject;
+        if (loginState == null)
+        {
+            loginState = new JObject
+            {
+                ["login"] = normalizedLogin,
+                ["entered"] = false,
+                ["enteredTimeUtc"] = JValue.CreateNull(),
+                ["sent"] = false,
+                ["sentTimeUtc"] = JValue.CreateNull(),
+                ["sentSource"] = ""
+            };
+            logins[normalizedLogin] = loginState;
+        }
+        else
+        {
+            loginState["login"] = normalizedLogin;
+            if (loginState["entered"] == null)
+            {
+                loginState["entered"] = false;
+            }
+
+            if (loginState["sent"] == null)
+            {
+                loginState["sent"] = false;
+            }
+
+            if (loginState["sentSource"] == null)
+            {
+                loginState["sentSource"] = "";
+            }
+        }
+
+        return loginState;
+    }
+
+    private void SaveState(JObject state, JObject config)
+    {
+        DateTime now = DateTime.UtcNow;
+        state["lastUpdatedAtUtc"] = now.ToString("o");
+        PruneArchivedSessions(state, config, now);
+        CPH.SetGlobalVar(StateGlobal, state.ToString(Newtonsoft.Json.Formatting.None), true);
+        CPH.SetGlobalVar(SessionGlobal, GetString(state, "activeSessionId"), true);
+    }
+
+    private void PruneArchivedSessions(JObject state, JObject config, DateTime now)
+    {
+        int recoveryWindowMinutes = GetRecoveryWindowMinutes(config);
+        int maxArchivedSessions = GetMaxArchivedSessions(config);
+        JArray archives = state["archivedSessions"] as JArray;
+        JArray pruned = new JArray();
+
+        if (archives == null || recoveryWindowMinutes <= 0 || maxArchivedSessions <= 0 || !IsRecoveryEnabled(config))
+        {
+            state["archivedSessions"] = pruned;
+            return;
+        }
+
+        TimeSpan recoveryWindow = TimeSpan.FromMinutes(recoveryWindowMinutes);
+        foreach (JObject archive in archives.Children<JObject>())
+        {
+            DateTime archiveTime;
+            if (TryGetArchiveTime(archive, out archiveTime) && now - archiveTime <= recoveryWindow)
+            {
+                pruned.Add(archive);
+            }
+        }
+
+        JArray bounded = new JArray();
+        int start = Math.Max(0, pruned.Count - maxArchivedSessions);
+        for (int index = start; index < pruned.Count; index++)
+        {
+            bounded.Add(pruned[index]);
+        }
+
+        state["archivedSessions"] = bounded;
+    }
+
+    private bool TryGetArchiveTime(JObject archive, out DateTime archiveTime)
+    {
+        return TryParseUtc(GetString(archive, "archivedAtUtc"), out archiveTime)
+            || TryParseUtc(GetString(archive, "lastUpdatedAtUtc"), out archiveTime)
+            || TryParseUtc(GetString(archive, "activeStartedAtUtc"), out archiveTime);
+    }
+
+    private bool TryParseUtc(string value, out DateTime parsed)
+    {
+        DateTime result;
+        if (DateTime.TryParse(value, out result))
+        {
+            parsed = result.ToUniversalTime();
+            return true;
+        }
+
+        parsed = DateTime.MinValue;
+        return false;
+    }
+
+    private bool IsRecoveryEnabled(JObject config)
+    {
+        JObject streamState = config == null ? null : config["streamState"] as JObject;
+        return IsEnabled(streamState == null ? null : streamState["recoveryEnabled"], true);
+    }
+
+    private int GetRecoveryWindowMinutes(JObject config)
+    {
+        JObject streamState = config == null ? null : config["streamState"] as JObject;
+        return GetInt(streamState, "recoveryWindowMinutes", 30);
+    }
+
+    private int GetMaxArchivedSessions(JObject config)
+    {
+        JObject streamState = config == null ? null : config["streamState"] as JObject;
+        return GetInt(streamState, "maxArchivedSessions", 3);
+    }
+
+    private int GetInt(JObject obj, string key, int defaultValue)
+    {
+        int parsed;
+        return int.TryParse(GetString(obj, key), out parsed) ? parsed : defaultValue;
+    }
+
+    private bool IsSchemaVersionOne(JObject state)
+    {
+        int parsed;
+        return int.TryParse(GetString(state, "schemaVersion"), out parsed) && parsed == 1;
     }
 
     private bool CallerIsModeratorOrBroadcaster()

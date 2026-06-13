@@ -1,6 +1,6 @@
 # Command Setup
 
-The generated import creates disabled moderator-only commands for single, batch, automatic-toggle, and automatic-add shoutout paths.
+The generated import creates disabled moderator-only commands for single, batch, automatic-toggle, automatic-add, and stream-state recovery paths.
 
 Imported command settings:
 
@@ -37,6 +37,14 @@ Aliases:
 Location: Start
 Permissions: Moderators and Broadcaster
 Action: FCS - Handle Auto Shoutout Add
+
+Name: First Chat Shoutout Recover Stream State
+Aliases:
+!sorecover
+!shoutoutrecover
+Location: Start
+Permissions: Moderators and Broadcaster
+Action: FCS - Recover Stream State
 ```
 
 Streamer.bot imports commands disabled by default for safety. After importing into a disposable profile, inspect the command and enable it when ready.
@@ -56,6 +64,8 @@ Usage:
 !soautoadd @somecreator Go follow @{login}; they last streamed {lastGame}!
 !addsoauto somecreator Please show @{displayName} some love at https://twitch.tv/{login}
 !shoutoutautoadd somecreator They were last streaming {lastGame}.
+!sorecover
+!shoutoutrecover
 ```
 
 The manual command can shout out any Twitch login. If the login also appears in `firstChatShoutouts.config`, the module uses that person's `announcementTemplate`; otherwise it uses `defaultAnnouncementTemplate`.
@@ -65,6 +75,8 @@ The shoutout-all command shouts out enabled configured people who have spoken in
 The auto-toggle command updates `automatic.enabled` in `firstChatShoutouts.config`. It controls automatic first-chat shoutouts only; stream-entry tracking and `!soall` continue to work while automatic shoutouts are off.
 
 The auto-add command updates `people` in `firstChatShoutouts.config`. It treats the first typed argument as the Twitch login and the remaining text as an optional `announcementTemplate`. If the login already exists, it is set back to `enabled: true`; a provided custom message replaces that person's previous template, while omitting the custom message preserves the existing template or falls back to `defaultAnnouncementTemplate`.
+
+The recovery command restores the newest archived shoutout session when it is still inside `streamState.recoveryWindowMinutes`. Keep it disabled until moderators understand when to use it: it is meant for accidental fresh resets after a short stream outage, not for merging intentionally separate streams.
 
 Custom auto-add messages support the same tokens as other shoutout templates:
 
@@ -108,3 +120,5 @@ The auto-add command accepts:
 ```
 
 `FCS - Run Shoutout` still checks that the caller is a moderator or broadcaster when `manual.moderatorOnly` or `manualAll.moderatorOnly` is `true`; the toggle action checks `autoToggle.moderatorOnly`, and the add action checks `autoAdd.moderatorOnly`. Keep the Streamer.bot command permissions restricted too, because that gives immediate feedback and avoids unnecessary action executions.
+
+`FCS - Recover Stream State` also checks that the caller is a moderator or broadcaster before changing `firstChatShoutouts.streamState`.

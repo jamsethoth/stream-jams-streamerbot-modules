@@ -9,6 +9,12 @@ public class CPHInline
 
     public bool Execute()
     {
+        if (!CallerIsModeratorOrBroadcaster())
+        {
+            CPH.LogWarn("[FCS] Stream state recovery denied because caller is not a moderator or broadcaster.");
+            return true;
+        }
+
         if (!TryLoadConfig(out JObject config))
         {
             return true;
@@ -16,31 +22,50 @@ public class CPHInline
 
         DateTime now = DateTime.UtcNow;
         RecoverySettings settings = GetRecoverySettings(config);
+        if (!settings.RecoveryEnabled || settings.RecoveryWindowMinutes <= 0)
+        {
+            CPH.SendMessage("No recoverable shoutout session is available.");
+            CPH.LogInfo("[FCS] Stream state recovery skipped because recovery is disabled.");
+            return true;
+        }
 
         JObject state;
-        bool createdState;
-        if (!TryLoadState(out state, out createdState, now))
+        if (!TryLoadState(out state, now))
         {
             return true;
         }
 
-        if (!createdState && IsActiveSessionRecoverable(state, settings, now))
+        JArray archives = state["archivedSessions"] as JArray;
+        if (archives == null || archives.Count == 0)
         {
-            state["lastRecoveredAtUtc"] = now.ToString("o");
+            CPH.SendMessage("No recoverable shoutout session is available.");
+            return true;
+        }
+
+        TimeSpan recoveryWindow = TimeSpan.FromMinutes(settings.RecoveryWindowMinutes);
+        for (int index = archives.Count - 1; index >= 0; index--)
+        {
+            JObject archive = archives[index] as JObject;
+            if (archive == null)
+            {
+                continue;
+            }
+
+            DateTime archiveTime;
+            if (!TryGetArchiveTime(archive, out archiveTime) || now - archiveTime > recoveryWindow)
+            {
+                continue;
+            }
+
+            RestoreArchive(state, archive, now);
+            archives.RemoveAt(index);
             SaveState(state, settings, now);
+            CPH.SendMessage("Recovered the previous automatic shoutout session.");
             CPH.LogInfo($"[FCS] Stream shoutout session recovered as {GetString(state, "activeSessionId")}.");
             return true;
         }
 
-        if (!createdState && !string.IsNullOrWhiteSpace(GetString(state, "activeSessionId")))
-        {
-            ArchiveActiveSession(state, now);
-        }
-
-        string sessionId = DateTime.UtcNow.Ticks.ToString();
-        SetBlankActiveSession(state, sessionId, now);
-        SaveState(state, settings, now);
-        CPH.LogInfo($"[FCS] Stream shoutout session reset to {sessionId}.");
+        CPH.SendMessage("No recoverable shoutout session is available.");
         return true;
     }
 
@@ -66,15 +91,13 @@ public class CPHInline
         }
     }
 
-    private bool TryLoadState(out JObject state, out bool createdState, DateTime now)
+    private bool TryLoadState(out JObject state, DateTime now)
     {
         state = null;
-        createdState = false;
         string stateJson = CPH.GetGlobalVar<string>(StateGlobal, true);
         if (string.IsNullOrWhiteSpace(stateJson))
         {
             state = CreateBlankState(CurrentSessionId(), now);
-            createdState = true;
             return true;
         }
 
@@ -141,54 +164,14 @@ public class CPHInline
         }
     }
 
-    private bool IsActiveSessionRecoverable(JObject state, RecoverySettings settings, DateTime now)
+    private void RestoreArchive(JObject state, JObject archive, DateTime now)
     {
-        if (!settings.RecoveryEnabled || settings.RecoveryWindowMinutes <= 0)
-        {
-            return false;
-        }
-
-        DateTime freshnessTime;
-        if (!TryParseUtc(GetString(state, "lastUpdatedAtUtc"), out freshnessTime)
-            && !TryParseUtc(GetString(state, "activeStartedAtUtc"), out freshnessTime))
-        {
-            return false;
-        }
-
-        return now - freshnessTime <= TimeSpan.FromMinutes(settings.RecoveryWindowMinutes);
-    }
-
-    private void ArchiveActiveSession(JObject state, DateTime now)
-    {
-        JObject archive = new JObject
-        {
-            ["sessionId"] = GetString(state, "activeSessionId"),
-            ["activeSessionId"] = GetString(state, "activeSessionId"),
-            ["activeStartedAtUtc"] = GetString(state, "activeStartedAtUtc"),
-            ["lastUpdatedAtUtc"] = GetString(state, "lastUpdatedAtUtc"),
-            ["lastRecoveredAtUtc"] = state["lastRecoveredAtUtc"] == null ? JValue.CreateNull() : state["lastRecoveredAtUtc"].DeepClone(),
-            ["archivedAtUtc"] = now.ToString("o"),
-            ["targets"] = state["targets"] == null ? new JObject() : state["targets"].DeepClone()
-        };
-
-        JArray archives = state["archivedSessions"] as JArray;
-        if (archives == null)
-        {
-            archives = new JArray();
-            state["archivedSessions"] = archives;
-        }
-
-        archives.Add(archive);
-    }
-
-    private void SetBlankActiveSession(JObject state, string sessionId, DateTime now)
-    {
-        string timestamp = now.ToString("o");
+        string sessionId = FirstNonBlank(GetString(archive, "sessionId"), GetString(archive, "activeSessionId"), DateTime.UtcNow.Ticks.ToString());
         state["activeSessionId"] = sessionId;
-        state["activeStartedAtUtc"] = timestamp;
-        state["lastUpdatedAtUtc"] = timestamp;
-        state["lastRecoveredAtUtc"] = JValue.CreateNull();
-        state["targets"] = new JObject();
+        state["activeStartedAtUtc"] = FirstNonBlank(GetString(archive, "activeStartedAtUtc"), now.ToString("o"));
+        state["lastRecoveredAtUtc"] = now.ToString("o");
+        state["lastUpdatedAtUtc"] = now.ToString("o");
+        state["targets"] = archive["targets"] == null ? new JObject() : archive["targets"].DeepClone();
     }
 
     private void SaveState(JObject state, RecoverySettings settings, DateTime now)
@@ -260,6 +243,35 @@ public class CPHInline
         return sessionId;
     }
 
+    private bool CallerIsModeratorOrBroadcaster()
+    {
+        return AnyBooleanArgIsTrue("isModerator", "moderator", "isBroadcaster", "broadcaster");
+    }
+
+    private bool AnyBooleanArgIsTrue(params string[] argNames)
+    {
+        foreach (string argName in argNames)
+        {
+            bool boolValue;
+            if (CPH.TryGetArg(argName, out boolValue) && boolValue)
+            {
+                return true;
+            }
+
+            string stringValue;
+            if (
+                CPH.TryGetArg(argName, out stringValue)
+                && bool.TryParse(stringValue, out boolValue)
+                && boolValue
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool TryParseUtc(string value, out DateTime parsed)
     {
         DateTime result;
@@ -301,6 +313,19 @@ public class CPHInline
         JToken token = obj == null ? null : obj[key];
         string value = token == null ? "" : token.ToString();
         return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
+    }
+
+    private string FirstNonBlank(params string[] values)
+    {
+        foreach (string value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return "";
     }
 
     private class RecoverySettings
