@@ -59,6 +59,11 @@
       "!shoutoutautoadd"
     ]
   },
+  "streamState": {
+    "recoveryEnabled": true,
+    "recoveryWindowMinutes": 30,
+    "maxArchivedSessions": 3
+  },
   "people": [
     {
       "login": "examplecreator",

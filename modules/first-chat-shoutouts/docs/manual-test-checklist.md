@@ -8,7 +8,7 @@ Use a disposable Streamer.bot profile and a low-risk Twitch channel before live 
 - Confirm the `First Chat Shoutouts` action group exists.
 - Compile every imported C# sub-action.
 - Run `FCS - Configure Defaults`.
-- Confirm `firstChatShoutouts.config` and `firstChatShoutouts.streamSessionId` exist.
+- Confirm `firstChatShoutouts.config`, `firstChatShoutouts.streamSessionId`, and `firstChatShoutouts.streamState` exist.
 
 ## Automatic Path
 
@@ -27,7 +27,7 @@ Use a disposable Streamer.bot profile and a low-risk Twitch channel before live 
 ## Manual All Command Path
 
 - Create moderator-only `!soall` and `!shoutoutall` commands for `FCS - Handle Manual Twitch Shoutout All`.
-- Trigger Twitch First Words for two enabled configured people and confirm `firstChatShoutouts.entered.twitch_main.<session>` stores them in first-entry order.
+- Trigger Twitch First Words for two enabled configured people and confirm `firstChatShoutouts.streamState.targets.twitch_main.enteredOrder` stores them in first-entry order.
 - Run `!soall` as a mod and confirm each entered configured person is shouted out in order, even if one was already automatically shouted out earlier in the stream.
 - Set `automatic.enabled` to `false`, trigger Twitch First Words for another configured person, and confirm `!soall` still includes that person.
 - Run the command as a non-mod if possible and confirm it is denied when `manualAll.moderatorOnly` is `true`.
@@ -64,3 +64,26 @@ Use a disposable Streamer.bot profile and a low-risk Twitch channel before live 
 - Run `FCS - Reset Stream State`.
 - Run Streamer.bot's built-in `Reset First Words` sub-action.
 - Trigger first words for a configured automatic user and confirm the stream reset allows a fresh automatic shoutout.
+
+## Stream Outage Recovery
+
+- Trigger Twitch First Words for an enabled configured person and confirm `firstChatShoutouts.streamState` records `entered: true` and `sent: true` for that login.
+- Run `FCS - Reset Stream State` again inside `streamState.recoveryWindowMinutes` and confirm the same `activeSessionId` is kept, `lastRecoveredAtUtc` is updated, and the previous sent state is still present.
+- Trigger Twitch First Words for the same configured automatic user and confirm it is still skipped because the sent state recovered.
+
+## Fresh Stream Reset
+
+- Temporarily set `streamState.recoveryWindowMinutes` to `0`, or edit `lastUpdatedAtUtc` to be older than the recovery window in a disposable profile.
+- Run `FCS - Reset Stream State` and confirm a new `activeSessionId` is created with empty `targets`.
+- Confirm old active state is either archived and immediately pruned by the disabled window, or archived only when still inside the configured purge window.
+
+## Manual Recovery
+
+- Create moderator-only `!sorecover` and `!shoutoutrecover` commands for `FCS - Recover Stream State`.
+- With a recoverable archived session present, run `!sorecover` as a mod and confirm the archived session becomes active again.
+- Run the command as a non-mod if possible and confirm it is denied.
+
+## Malformed State
+
+- In a disposable profile, temporarily replace `firstChatShoutouts.streamState` with invalid JSON.
+- Run a First Words or manual shoutout path and confirm the action logs the malformed state and does not overwrite it with blank JSON.

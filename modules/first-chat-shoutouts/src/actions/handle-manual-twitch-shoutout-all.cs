@@ -6,7 +6,7 @@ public class CPHInline
 {
     private const string ConfigGlobal = "firstChatShoutouts.config";
     private const string SessionGlobal = "firstChatShoutouts.streamSessionId";
-    private const string EnteredPrefix = "firstChatShoutouts.entered.";
+    private const string StateGlobal = "firstChatShoutouts.streamState";
 
     public bool Execute()
     {
@@ -39,15 +39,21 @@ public class CPHInline
             return true;
         }
 
-        JArray entered = LoadEnteredLog(EnteredGlobal(targetId));
-        if (entered.Count == 0)
+        JObject state;
+        if (!TryLoadState(out state))
+        {
+            return true;
+        }
+
+        JArray enteredOrder = GetEnteredOrder(state, targetId);
+        if (enteredOrder.Count == 0)
         {
             CPH.LogInfo("[FCS] Manual shoutout-all found no configured chatters for this stream.");
             return true;
         }
 
         int attempted = 0;
-        foreach (JToken token in entered)
+        foreach (JToken token in enteredOrder)
         {
             string login = NormalizeLogin(token.ToString());
             if (string.IsNullOrWhiteSpace(login))
@@ -151,28 +157,91 @@ public class CPHInline
         return false;
     }
 
-    private JArray LoadEnteredLog(string enteredGlobal)
+    private bool TryLoadState(out JObject state)
     {
-        string existingJson = CPH.GetGlobalVar<string>(enteredGlobal, true);
-        if (string.IsNullOrWhiteSpace(existingJson))
+        state = null;
+        string stateJson = CPH.GetGlobalVar<string>(StateGlobal, true);
+        if (string.IsNullOrWhiteSpace(stateJson))
         {
-            return new JArray();
+            state = CreateBlankState(CurrentSessionId(), DateTime.UtcNow);
+            return true;
         }
 
         try
         {
-            return JArray.Parse(existingJson);
+            state = JObject.Parse(stateJson);
+            if (!IsSchemaVersionOne(state))
+            {
+                CPH.LogError($"[FCS] Unsupported schemaVersion in '{StateGlobal}'.");
+                state = null;
+                return false;
+            }
+
+            EnsureBaseState(state, DateTime.UtcNow);
+            return true;
         }
         catch (Exception ex)
         {
-            CPH.LogWarn($"[FCS] Could not parse entered chatter log '{enteredGlobal}': {ex.Message}");
-            return new JArray();
+            CPH.LogError($"[FCS] Invalid JSON in '{StateGlobal}': {ex.Message}");
+            return false;
         }
     }
 
-    private string EnteredGlobal(string targetId)
+    private JObject CreateBlankState(string sessionId, DateTime now)
     {
-        return EnteredPrefix + NormalizeKey(targetId) + "." + CurrentSessionId();
+        string timestamp = now.ToString("o");
+        return new JObject
+        {
+            ["schemaVersion"] = 1,
+            ["activeSessionId"] = sessionId,
+            ["activeStartedAtUtc"] = timestamp,
+            ["lastUpdatedAtUtc"] = timestamp,
+            ["lastRecoveredAtUtc"] = JValue.CreateNull(),
+            ["targets"] = new JObject(),
+            ["archivedSessions"] = new JArray()
+        };
+    }
+
+    private void EnsureBaseState(JObject state, DateTime now)
+    {
+        if (string.IsNullOrWhiteSpace(GetString(state, "activeSessionId")))
+        {
+            state["activeSessionId"] = CurrentSessionId();
+        }
+
+        if (string.IsNullOrWhiteSpace(GetString(state, "activeStartedAtUtc")))
+        {
+            state["activeStartedAtUtc"] = now.ToString("o");
+        }
+
+        if (string.IsNullOrWhiteSpace(GetString(state, "lastUpdatedAtUtc")))
+        {
+            state["lastUpdatedAtUtc"] = now.ToString("o");
+        }
+
+        if (!(state["targets"] is JObject))
+        {
+            state["targets"] = new JObject();
+        }
+
+        if (!(state["archivedSessions"] is JArray))
+        {
+            state["archivedSessions"] = new JArray();
+        }
+    }
+
+    private JArray GetEnteredOrder(JObject state, string targetId)
+    {
+        JObject targets = state["targets"] as JObject;
+        JObject targetState = targets == null ? null : targets[NormalizeKey(targetId)] as JObject;
+        JArray enteredOrder = targetState == null ? null : targetState["enteredOrder"] as JArray;
+        return enteredOrder ?? new JArray();
+    }
+
+    private bool IsSchemaVersionOne(JObject state)
+    {
+        int parsed;
+        return int.TryParse(GetString(state, "schemaVersion"), out parsed) && parsed == 1;
     }
 
     private string CurrentSessionId()

@@ -20,7 +20,9 @@ The generated import attaches a Twitch `Stream Online` trigger to:
 FCS - Reset Stream State
 ```
 
-It also includes Streamer.bot's built-in `Reset First Words` settings sub-action in the same stream-start flow. The module reset creates a new `firstChatShoutouts.streamSessionId`; `Reset First Words` clears Streamer.bot's own first-words tracking so the trigger can fire for a new stream.
+It also includes Streamer.bot's built-in `Reset First Words` settings sub-action in the same stream-start flow. `Reset First Words` clears Streamer.bot's own first-words tracking so the trigger can fire for a new stream. The module reset updates `firstChatShoutouts.streamState` and keeps `firstChatShoutouts.streamSessionId` synchronized with the active session.
+
+If Stream Online fires again during a short outage, `FCS - Reset Stream State` recovers the existing active state when `streamState.recoveryEnabled` is `true` and the state is still inside `streamState.recoveryWindowMinutes`. If the previous active state is outside that window, the action archives it, purges archived sessions older than the recovery window, trims archives to `streamState.maxArchivedSessions`, and starts a fresh active session.
 
 Suggested sub-action order:
 
@@ -29,4 +31,4 @@ Suggested sub-action order:
 2. Execute C# Code - FCS - Reset Stream State
 ```
 
-If either imported item is missing, add it manually before going live. If you do not reset both Streamer.bot First Words and `firstChatShoutouts.streamSessionId`, automatic shoutouts may not fire exactly once per stream.
+If either imported item is missing, add it manually before going live. If you do not reset both Streamer.bot First Words and the module stream state, automatic shoutouts may not fire exactly once per stream.

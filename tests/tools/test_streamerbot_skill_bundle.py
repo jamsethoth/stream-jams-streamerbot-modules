@@ -87,8 +87,8 @@ class StreamerbotSkillBundleTest(unittest.TestCase):
         inspected = json.loads(inspect_result.stdout)
 
         self.assertEqual(inspected["meta"]["name"], "First Chat Shoutouts")
-        self.assertEqual(inspected["counts"]["actions"], 8)
-        self.assertEqual(inspected["counts"]["commands"], 4)
+        self.assertEqual(inspected["counts"]["actions"], 9)
+        self.assertEqual(inspected["counts"]["commands"], 5)
 
     def test_bundled_generator_builds_giveaway_import_with_core_references(self):
         env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}

@@ -21,6 +21,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "src/actions/handle-auto-shoutout-toggle.cs",
             "src/actions/handle-auto-shoutout-add.cs",
             "src/actions/run-shoutout.cs",
+            "src/actions/recover-stream-state.cs",
             "src/actions/reset-stream-state.cs",
             "docs/import-prep.md",
             "docs/command-setup.md",
@@ -43,6 +44,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertIn("manualAll", config)
         self.assertIn("autoToggle", config)
         self.assertIn("autoAdd", config)
+        self.assertIn("streamState", config)
         self.assertIn("people", config)
         self.assertIn("defaultAnnouncementTemplate", config)
         self.assertIn("lastGameFallback", config)
@@ -70,6 +72,9 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertIn("!soautoadd", config["autoAdd"]["aliases"])
         self.assertIn("!addsoauto", config["autoAdd"]["aliases"])
         self.assertIn("!shoutoutautoadd", config["autoAdd"]["aliases"])
+        self.assertTrue(config["streamState"]["recoveryEnabled"])
+        self.assertEqual(config["streamState"]["recoveryWindowMinutes"], 30)
+        self.assertEqual(config["streamState"]["maxArchivedSessions"], 3)
 
         twitch_target = config["targets"]["twitch_main"]
         self.assertEqual(twitch_target["platform"], "twitch")
@@ -105,9 +110,19 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
                 "FCS - Handle Auto Shoutout Toggle",
                 "FCS - Handle Auto Shoutout Add",
                 "FCS - Run Shoutout",
+                "FCS - Recover Stream State",
                 "FCS - Reset Stream State",
             ],
         )
+        recover_command = next(
+            command
+            for command in manifest["commands"]
+            if command["action"] == "FCS - Recover Stream State"
+        )
+        self.assertFalse(recover_command["enabled"])
+        self.assertEqual(recover_command["permittedGroups"], ["Moderators"])
+        self.assertIn("!sorecover", recover_command["aliases"])
+        self.assertIn("!shoutoutrecover", recover_command["aliases"])
         self.assertTrue(manifest["actions"][0]["autoRun"])
         self.assertEqual(manifest["defaultConfig"], "src/config/default-config.json")
         self.assertIn(
@@ -129,7 +144,7 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "public bool Execute()",
             "firstChatShoutouts.config",
             "firstChatShoutouts.streamSessionId",
-            "firstChatShoutouts.sent.",
+            "firstChatShoutouts.streamState",
             "CPH.TryGetArg(\"targetId\"",
             "CPH.TryGetArg(\"shoutoutLogin\"",
             "CPH.TryGetArg(\"shoutoutSource\"",
@@ -142,6 +157,8 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "IsManualAllSource",
             "allowAnyLogin",
             "manualAll",
+            "sentTimeUtc",
+            "sentSource",
         ]
 
         for fragment in required_fragments:
@@ -186,7 +203,9 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("firstChatShoutouts.entered.", first_words)
+        self.assertIn("firstChatShoutouts.streamState", first_words)
+        self.assertIn("enteredOrder", first_words)
+        self.assertIn("enteredTimeUtc", first_words)
         self.assertIn("CPH.SetArgument(\"targetId\", \"twitch_main\")", first_words)
         self.assertIn("CPH.SetArgument(\"shoutoutSource\", \"automatic\")", first_words)
         self.assertIn("FCS - Run Shoutout", first_words)
@@ -197,7 +216,8 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertIn("CPH.SetArgument(\"shoutoutSource\", \"manual\")", manual)
         self.assertIn("FCS - Run Shoutout", manual)
 
-        self.assertIn("firstChatShoutouts.entered.", manual_all)
+        self.assertIn("firstChatShoutouts.streamState", manual_all)
+        self.assertIn("enteredOrder", manual_all)
         self.assertIn("manual_all", manual_all)
         self.assertIn("FCS - Run Shoutout", manual_all)
 
@@ -218,9 +238,35 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertIn("rawInput", auto_add)
 
         self.assertIn("firstChatShoutouts.streamSessionId", reset)
+        self.assertIn("firstChatShoutouts.streamState", reset)
+        self.assertIn("recoveryWindowMinutes", reset)
+        self.assertIn("maxArchivedSessions", reset)
+        self.assertIn("lastRecoveredAtUtc", reset)
+        self.assertIn("archivedSessions", reset)
+        self.assertIn("activeSessionId", reset)
+        self.assertIn("PruneArchivedSessions", reset)
         self.assertIn("DateTime.UtcNow.Ticks", reset)
         self.assertNotRegex(manual, r"args\s*\[")
         self.assertNotRegex(first_words, r"args\s*\[")
+
+    def test_runtime_state_sources_use_consolidated_global(self):
+        action_paths = [
+            "src/actions/configure-defaults.cs",
+            "src/actions/handle-twitch-first-words.cs",
+            "src/actions/handle-manual-twitch-shoutout-all.cs",
+            "src/actions/run-shoutout.cs",
+            "src/actions/recover-stream-state.cs",
+            "src/actions/reset-stream-state.cs",
+        ]
+
+        for relative_path in action_paths:
+            with self.subTest(action=relative_path):
+                source = (MODULE_ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("firstChatShoutouts.streamState", source)
+                self.assertNotIn('CPH.SetGlobalVar(EnteredPrefix', source)
+                self.assertNotIn('CPH.SetGlobalVar(SentGlobal', source)
+                self.assertNotIn('"firstChatShoutouts.entered."', source)
+                self.assertNotIn('"firstChatShoutouts.sent."', source)
 
     def test_docs_describe_import_triggers_commands_and_testing(self):
         readme = (MODULE_ROOT / "README.md").read_text(encoding="utf-8")
@@ -256,10 +302,14 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
         self.assertRegex(command_setup, re.compile(r"!soautoadd", re.IGNORECASE))
         self.assertRegex(command_setup, re.compile(r"!addsoauto", re.IGNORECASE))
         self.assertRegex(command_setup, re.compile(r"!shoutoutautoadd", re.IGNORECASE))
+        self.assertRegex(command_setup, re.compile(r"!sorecover", re.IGNORECASE))
+        self.assertRegex(command_setup, re.compile(r"!shoutoutrecover", re.IGNORECASE))
         self.assertRegex(command_setup, re.compile(r"mod", re.IGNORECASE))
         self.assertIn("any Twitch login", command_setup)
         self.assertIn("automatic.enabled", readme)
         self.assertIn("autoAdd.enabled", readme)
+        self.assertIn("firstChatShoutouts.streamState", readme)
+        self.assertIn("archive", readme)
         self.assertIn("{lastGame}", command_setup)
 
         expected_cases = [
@@ -274,6 +324,10 @@ class FirstChatShoutoutsArtifactsTest(unittest.TestCase):
             "native shoutout cooldown",
             "per-person template",
             "stream reset",
+            "stream outage recovery",
+            "fresh stream reset",
+            "manual recovery",
+            "malformed state",
         ]
         for case in expected_cases:
             with self.subTest(case=case):

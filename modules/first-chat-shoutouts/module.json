@@ -41,6 +41,10 @@
       "source": "src/actions/run-shoutout.cs"
     },
     {
+      "name": "FCS - Recover Stream State",
+      "source": "src/actions/recover-stream-state.cs"
+    },
+    {
       "name": "FCS - Reset Stream State",
       "source": "src/actions/reset-stream-state.cs",
       "triggers": [
@@ -100,6 +104,20 @@
         "!soautoadd",
         "!addsoauto",
         "!shoutoutautoadd"
+      ],
+      "enabled": false,
+      "group": "First Chat Shoutouts",
+      "permittedGroups": [
+        "Moderators"
+      ],
+      "sources": 1
+    },
+    {
+      "name": "First Chat Shoutout Recover Stream State",
+      "action": "FCS - Recover Stream State",
+      "aliases": [
+        "!sorecover",
+        "!shoutoutrecover"
       ],
       "enabled": false,
       "group": "First Chat Shoutouts",
